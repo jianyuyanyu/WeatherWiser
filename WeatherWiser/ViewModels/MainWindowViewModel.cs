@@ -30,6 +30,7 @@ namespace WeatherWiser.ViewModels
         public MainWindowViewModel()
         {
             weatherService = new WeatherService();
+            Initialize();
         }
 
         public void Initialize()

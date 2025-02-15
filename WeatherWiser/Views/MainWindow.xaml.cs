@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
-using WeatherWiser.ViewModels;
 
 namespace WeatherWiser.Views
 {
@@ -30,12 +29,6 @@ namespace WeatherWiser.Views
             if (result == 0)
             {
                 throw new InvalidOperationException("Failed to set window long.");
-            }
-
-            var viewModel = this.DataContext as MainWindowViewModel;
-            if (viewModel != null)
-            {
-                viewModel.Initialize();
             }
         }
 

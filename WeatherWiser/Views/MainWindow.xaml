@@ -42,38 +42,38 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2"
-                   VerticalAlignment="Center" HorizontalAlignment="Center"
-                   Style="{StaticResource HoverTextBlockStyle}">
-            <Run Text="{Binding DateTimeInfo.Time, Mode=OneWay}" FontSize="{Binding FontSize}"/>
+                VerticalAlignment="Center" HorizontalAlignment="Center"
+                Style="{StaticResource HoverTextBlockStyle}">
+        <Run Text="{Binding DateTimeInfo.Time, Mode=OneWay}" FontSize="{Binding FontSize}"/>
         </TextBlock>
 
         <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                   VerticalAlignment="Center" HorizontalAlignment="Center"
-                   Style="{StaticResource HoverTextBlockStyle}">
-            <Run Text="{Binding DateTimeInfo.Date, Mode=OneWay}"  FontSize="{Binding MediumFontSize}"/>
-            <Run Text="{Binding DateTimeInfo.ShortDayOfWeek, StringFormat='({0})', Mode=OneWay}" FontSize="{Binding MediumFontSize}"/>
+                VerticalAlignment="Center" HorizontalAlignment="Center"
+                Style="{StaticResource HoverTextBlockStyle}">
+        <Run Text="{Binding DateTimeInfo.Date, Mode=OneWay}"  FontSize="{Binding MediumFontSize}"/>
+        <Run Text="{Binding DateTimeInfo.ShortDayOfWeek, StringFormat='({0})', Mode=OneWay}" FontSize="{Binding MediumFontSize}"/>
         </TextBlock>
 
         <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="4"
-                Width="Auto" Height="1" BorderBrush="White" BorderThickness="1" />
+            Width="Auto" Height="1" BorderBrush="White" BorderThickness="1" />
 
         <Image Grid.Row="3" Grid.Column="0" Grid.RowSpan="2"
-               VerticalAlignment="Center" HorizontalAlignment="Center"
-               Source="{Binding WeatherInfo.IconId, Converter={StaticResource IconIdToImageSourceConverter}}" 
-               Width="64" Height="64"/>
+            VerticalAlignment="Center" HorizontalAlignment="Center"
+            Source="{Binding WeatherInfo.IconId, Converter={StaticResource IconIdToImageSourceConverter}}" 
+            Width="64" Height="64"/>
 
         <TextBlock Grid.Row="3" Grid.Column="1" 
-                   VerticalAlignment="Center" HorizontalAlignment="Stretch"
-                   Style="{StaticResource HoverTextBlockStyle}">
-            <Run Text="{Binding WeatherInfo.Temperature, StringFormat='{}{0}°C ', Mode=OneWay}" FontSize="{Binding MediumFontSize}"/>
-            <Run Text="{Binding WeatherInfo.City, Mode=OneWay}"  FontSize="{Binding MediumFontSize}"/>
+                VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                Style="{StaticResource HoverTextBlockStyle}">
+        <Run Text="{Binding WeatherInfo.Temperature, StringFormat='{}{0}°C ', Mode=OneWay}" FontSize="{Binding MediumFontSize}"/>
+        <Run Text="{Binding WeatherInfo.City, Mode=OneWay}"  FontSize="{Binding MediumFontSize}"/>
         </TextBlock>
 
         <TextBlock Grid.Row="4" Grid.Column="1" 
-                   VerticalAlignment="Center" HorizontalAlignment="Stretch"
-                   Style="{StaticResource HoverTextBlockStyle}">
-            <Run Text="{Binding WeatherInfo.Main, StringFormat='{}{0} ', Mode=OneWay}" FontSize="{Binding MediumFontSize}"/>
-            <Run Text="{Binding WeatherInfo.Description, StringFormat='({0})', Mode=OneWay}" FontSize="{Binding MediumFontSize}"/>
+                VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                Style="{StaticResource HoverTextBlockStyle}">
+        <Run Text="{Binding WeatherInfo.Main, StringFormat='{}{0} ', Mode=OneWay}" FontSize="{Binding MediumFontSize}"/>
+        <Run Text="{Binding WeatherInfo.Description, StringFormat='({0})', Mode=OneWay}" FontSize="{Binding MediumFontSize}"/>
         </TextBlock>
 
         <Grid  Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Margin="0">
@@ -87,17 +87,17 @@
                 <ColumnDefinition Width="1*"/>
             </Grid.ColumnDefinitions>
             <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,4,4"
-                       Text="{Binding WeatherInfo.FeelsLike, StringFormat='体感 {0} °C'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
+                    Text="{Binding WeatherInfo.FeelsLike, StringFormat='体感 {0} °C'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
             <TextBlock Grid.Row="0" Grid.Column="1" Margin="0,0,4,4"
-                       Text="{Binding WeatherInfo.Humidity, StringFormat='湿度 {0} %'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
+                    Text="{Binding WeatherInfo.Humidity, StringFormat='湿度 {0} %'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
             <TextBlock Grid.Row="0" Grid.Column="2" Margin="0,0,0,4"
-                       Text="{Binding WeatherInfo.Pressure, StringFormat='気圧 {0} hPa'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
+                    Text="{Binding WeatherInfo.Pressure, StringFormat='気圧 {0} hPa'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
             <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,4,0"
-                       Text="{Binding WeatherInfo.PrecipitationProbability, StringFormat='雨量 {0} mm'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
+                    Text="{Binding WeatherInfo.PrecipitationProbability, StringFormat='雨量 {0} mm'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
             <TextBlock Grid.Row="1" Grid.Column="1" Margin="0,0,4,0"
-                       Text="{Binding WeatherInfo.WindSpeed, StringFormat='風速 {0} m/s'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
+                    Text="{Binding WeatherInfo.WindSpeed, StringFormat='風速 {0} m/s'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
             <TextBlock Grid.Row="1" Grid.Column="2" Margin="0,0,0,0"
-                       Text="{Binding WeatherInfo.CardinalDirection, StringFormat='風向 {0}'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
+                    Text="{Binding WeatherInfo.CardinalDirection, StringFormat='風向 {0}'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
         </Grid>
     </Grid>
 </Window>
