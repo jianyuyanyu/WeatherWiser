@@ -72,7 +72,6 @@ namespace WeatherWiser.ViewModels
         private void OnDateTimedEvent(object sender, EventArgs e)
         {
             UpdateDateTimeInfo();
-            UpdateWindowPosition();
         }
 
         private void OnWeatherTimedEvent(object sender, EventArgs e)
@@ -115,12 +114,15 @@ namespace WeatherWiser.ViewModels
                 var screen = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == SelectedDisplay) ?? Screen.PrimaryScreen;
                 var workingArea = screen.WorkingArea;
 
+                double mainWindowWidth = double.IsNaN(mainWindow.Width) ? 600 : mainWindow.Width;
+                double mainWindowHeight = double.IsNaN(mainWindow.Height) ? 450 : mainWindow.Height;
+
                 mainWindow.Left = WindowPosition switch
                 {
                     "TopLeft" => workingArea.Left + HorizontalOffset,
-                    "TopRight" => workingArea.Right - mainWindow.Width - HorizontalOffset,
+                    "TopRight" => workingArea.Right - mainWindowWidth - HorizontalOffset,
                     "BottomLeft" => workingArea.Left + HorizontalOffset,
-                    "BottomRight" => workingArea.Right - mainWindow.Width - HorizontalOffset,
+                    "BottomRight" => workingArea.Right - mainWindowWidth - HorizontalOffset,
                     _ => mainWindow.Left
                 };
 
@@ -128,8 +130,8 @@ namespace WeatherWiser.ViewModels
                 {
                     "TopLeft" => workingArea.Top + VerticalOffset,
                     "TopRight" => workingArea.Top + VerticalOffset,
-                    "BottomLeft" => workingArea.Bottom - mainWindow.Height - VerticalOffset,
-                    "BottomRight" => workingArea.Bottom - mainWindow.Height - VerticalOffset,
+                    "BottomLeft" => workingArea.Bottom - mainWindowHeight - VerticalOffset,
+                    "BottomRight" => workingArea.Bottom - mainWindowHeight - VerticalOffset,
                     _ => mainWindow.Top
                 };
             }

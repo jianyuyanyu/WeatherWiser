@@ -13,12 +13,12 @@ namespace WeatherWiser.Views
             InitializeComponent();
             Loaded += MainWindow_Loaded;
             Unloaded += MainWindow_Unloaded;
-            // CompositionTarget.Rendering イベントを使用してカーソル位置を監視
             CompositionTarget.Rendering += OnRendering;
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            // ウィンドウのスタイルを変更してクリックの透過処理を有効にする
             var hwnd = new WindowInteropHelper(this).Handle;
             int extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
             if (extendedStyle == 0)
@@ -39,6 +39,12 @@ namespace WeatherWiser.Views
 
         private void OnRendering(object sender, EventArgs e)
         {
+            // ウィンドウが有効かどうかを確認
+            if (!this.IsVisible || this.WindowState == WindowState.Minimized)
+            {
+                return;
+            }
+
             // カーソルの位置を取得（ディスプレイの絶対座標）
             var cursorPosition = System.Windows.Forms.Cursor.Position;
             // ウィンドウのスクリーン座標を取得
@@ -47,11 +53,13 @@ namespace WeatherWiser.Views
             if (cursorPosition.X >= windowPosition.X && cursorPosition.X <= windowPosition.X + this.ActualWidth &&
                 cursorPosition.Y >= windowPosition.Y && cursorPosition.Y <= windowPosition.Y + this.ActualHeight)
             {
-                this.Opacity = 0.2; // 背景の透過率を変更
+                // 背景の透過率を変更
+                this.Opacity = 0.2;
             }
             else
             {
-                this.Opacity = 1.0; // 背景の透過率を元に戻す
+                // 背景の透過率を元に戻す
+                this.Opacity = 1.0;
             }
         }
 

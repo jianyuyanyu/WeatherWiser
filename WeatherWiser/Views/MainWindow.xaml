@@ -11,8 +11,9 @@
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
-        SizeToContent="WidthAndHeight"
-        ShowInTaskbar="False">
+        ShowInTaskbar="False"
+        Width="600"
+        Height="450">
     <Window.Resources>
         <converters:IconIdToImageSourceConverter x:Key="IconIdToImageSourceConverter"/>
         <Style x:Key="HoverTextBlockStyle" TargetType="TextBlock">

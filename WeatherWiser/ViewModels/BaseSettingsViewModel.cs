@@ -97,7 +97,7 @@ namespace WeatherWiser.ViewModels
             VerticalOffset = SettingsHelper.GetSetting(SettingKeys.VerticalOffset, 0);
             FontSize = SettingsHelper.GetSetting(SettingKeys.FontSize, 36);
             MediumFontSize = FontSize / 3;
-            SmallFontSize = FontSize / 4;
+            SmallFontSize = FontSize / 5;
             SelectedDisplay = SettingsHelper.GetSetting(SettingKeys.Display, Screen.PrimaryScreen.DeviceName);
             City = SettingsHelper.GetSetting(SettingKeys.City, "Tokyo, JP");
         }
