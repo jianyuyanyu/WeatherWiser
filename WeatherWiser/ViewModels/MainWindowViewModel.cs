@@ -115,7 +115,7 @@ namespace WeatherWiser.ViewModels
                 var workingArea = screen.WorkingArea;
 
                 double mainWindowWidth = double.IsNaN(mainWindow.Width) ? 600 : mainWindow.Width;
-                double mainWindowHeight = double.IsNaN(mainWindow.Height) ? 450 : mainWindow.Height;
+                double mainWindowHeight = double.IsNaN(mainWindow.Height) ? 480 : mainWindow.Height;
 
                 mainWindow.Left = WindowPosition switch
                 {

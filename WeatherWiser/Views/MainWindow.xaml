@@ -13,7 +13,7 @@
         Background="Transparent"
         ShowInTaskbar="False"
         Width="600"
-        Height="450">
+        Height="480">
     <Window.Resources>
         <converters:IconIdToImageSourceConverter x:Key="IconIdToImageSourceConverter"/>
         <Style x:Key="HoverTextBlockStyle" TargetType="TextBlock">
@@ -30,6 +30,7 @@
     </Window.Resources>
     <Grid Margin="4">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -100,5 +101,8 @@
             <TextBlock Grid.Row="1" Grid.Column="2" Margin="0,0,0,0"
                     Text="{Binding WeatherInfo.CardinalDirection, StringFormat='風向 {0}'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
         </Grid>
+
+        <Canvas Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,5,0,0"
+                Width="540" Height="50" Name="LevelCanvas" />
     </Grid>
 </Window>

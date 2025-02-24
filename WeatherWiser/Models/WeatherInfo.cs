@@ -4,7 +4,7 @@ namespace WeatherWiser.Models
 {
     public class WeatherInfo
     {
-        readonly string[] directions = { "北", "北北東", "北東", "東北東", "東", "東南東", "南東", "南南東", "南", "南南西", "南西", "西南西", "西", "西北西", "北西", "北北西" };
+        private static readonly string[] Directions = { "北", "北北東", "北東", "東北東", "東", "東南東", "南東", "南南東", "南", "南南西", "南西", "西南西", "西", "西北西", "北西", "北北西" };
         public string Main { get; set; }
         public string Description { get; set; }
         public int Temperature { get; set; }
@@ -20,8 +20,8 @@ namespace WeatherWiser.Models
         {
             get
             {
-                int index = (int)Math.Round((double)WindDirection % 360 / 22.5);
-                return directions[index];
+                int index = (int)Math.Round((double)WindDirection % 360 / 22.5) % 16;
+                return Directions[index];
             }
         }
     }
