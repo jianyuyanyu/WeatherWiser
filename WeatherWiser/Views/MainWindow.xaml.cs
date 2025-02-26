@@ -1,6 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading.Channels;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -13,20 +16,42 @@ namespace WeatherWiser.Views
 {
     public partial class MainWindow : Window
     {
+        // デバイス番号
+        private int _devicenumber = -1;
         // WASAPIプロセス
         private readonly WASAPIPROC _process;
         // コードページ
         private readonly bool UNICODE = true;
         // 音量レベルの減衰値
-        private readonly short _decay = 300;
+        private readonly short _spectrumDecay = 10;
+        // 音量レベルの減衰値
+        private readonly short _levelDecay = 500;
         // 画面表示更新用タイマー
         private readonly DispatcherTimer _timer;
+        // 音量レベルのピーク値
+        private int _levelPeek = 13;
         // 音量レベル
         private readonly int[] _levels = [0, 0];
         // 音量レベル（ピーク時）
         private readonly int[] _peekLevels = [0, 0];
-        // デバイス番号
-        private int _devicenumber = -1;
+        // 音量レベルの矩形
+        private System.Windows.Shapes.Rectangle[,] _levelRects = new System.Windows.Shapes.Rectangle[2, 13];
+        // スペクトラムのバー数
+        private int _numberOfBar = 16;
+        // スペクトラムの高さ
+        private int _spectrumHeight = 10;
+        // スペクトラム（ピーク時）
+        private readonly int[] _peekSpectrums = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        // スペクトラムの矩形
+        private System.Windows.Shapes.Rectangle[,] _spectrumRects = new System.Windows.Shapes.Rectangle[16, 10];
+
+        private int _channel = 1;                            // 1: "mixed-data"(mono) 2: L+R
+        private int _mixfreq;                            // devide frequency
+        private float _mixfreqMultiplyer;                // frequency multiply value
+        private float[] _fft = new float[16384 * 2/*channel*/];     // buffer for fft data
+        private BASSData _DATAFLAG;                      // for "interreave" format
+        private readonly float _freqShift = (float)Math.Round(Math.Log(20000/*hz*/, 2) - 10/*difference to 20hz*/, 2);    // constant 4.29
+        public List<byte> _spectrumdata = new List<byte>();                 // spectrum data buffer
 
         public MainWindow()
         {
@@ -42,6 +67,7 @@ namespace WeatherWiser.Views
                 IsEnabled = false,
             };
             _timer.Tick += Timer_Tick;
+
             Bass.BASS_SetConfig(BASSConfig.BASS_CONFIG_UNICODE, UNICODE);
             InitBass();
         }
@@ -54,65 +80,119 @@ namespace WeatherWiser.Views
 
         private void Timer_Tick(object sender, EventArgs e)
         {
+            int ret = BassWasapi.BASS_WASAPI_GetData(_fft, (int)_DATAFLAG);
+            if (ret < -1)
+            {
+                return;
+            }
+
+            int bandX, powerY;
+            int fftPos = 0;
+            int freqValue = 1;
+
+            _spectrumdata.Clear();
+
+            for (bandX = 0; bandX < _numberOfBar; bandX++)
+            {
+                float[] peak = { 0f, 0f };
+
+                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / _numberOfBar) + _freqShift) * _mixfreqMultiplyer);
+                if (freqValue <= fftPos)
+                    freqValue = fftPos + 1;
+
+                if (_mixfreq <= 48000)
+                    // 44.1khz, 48khz
+                    if (freqValue > 4096 * _channel - _channel)
+                        freqValue = 4096 * _channel - _channel;
+                else if (_mixfreq <= 88200)
+                    // 88.2khz
+                    if (freqValue > 8192 * _channel - _channel)
+                        freqValue = 8192 * _channel - _channel;
+                else
+                    // 96khz, 176.4khz, 192khz, 384khz ~
+                    if (freqValue > 16384 * _channel - _channel)
+                        freqValue = 16384 * _channel - _channel;
+
+                for (; fftPos < freqValue; fftPos += _channel)
+                {
+                    for (int i = 0; i < _channel; i++)
+                    {
+                        if (peak[0] < _fft[1 + fftPos])
+                            peak[0] = _fft[1 + fftPos];
+                        if (peak[1] < _fft[1 + fftPos + (_channel - 1)])
+                            peak[1] = _fft[1 + fftPos + (_channel - 1)];
+                    }
+                }
+
+                for (int i = 0; i < _channel; i++)
+                {
+                    powerY = (int)(Math.Sqrt(peak[i]) * 2 * 255);
+                    if (powerY > 255)
+                        powerY = 255;
+                    if (powerY < 0)
+                        powerY = 0;
+                    _spectrumdata.Add((byte)powerY);
+                }
+            }
+
+            //Debug.WriteLine(string.Join(", ", _spectrumdata));
+            UpdateSpectrumCanvas();
+            UpdateLevelCanvas();
+        }
+
+
+        private void UpdateSpectrumCanvas()
+        {
+            for (int x = 0; x < _numberOfBar; x++)
+            {
+                int spectrum = NormalizeValue(this._spectrumdata[x], byte.MaxValue, _spectrumHeight);
+                this._peekSpectrums[x] = UpdatePeekValue(this._spectrumdata[x], this._peekSpectrums[x], this._spectrumDecay);
+                int peekSpectrum = NormalizeValue(this._peekSpectrums[x], byte.MaxValue, _spectrumHeight);
+
+                for (int y = 0; y < _spectrumHeight; y++)
+                {
+                    _spectrumRects[x, y].Fill = y + 1 == peekSpectrum ? y >= 7 ? Brushes.Lime : Brushes.Lime :
+                        y < spectrum ? y >= 7 ? Brushes.LimeGreen : Brushes.LimeGreen : Brushes.DimGray;
+                }
+            }
+        }
+
+        private void UpdateLevelCanvas()
+        {
             int level = BassWasapi.BASS_WASAPI_GetLevel();
             this._levels[0] = Utils.LowWord32(level);
             this._levels[1] = Utils.HighWord32(level);
 
-            int levelL = (int)Math.Ceiling((double)this._levels[0] / (double)short.MaxValue * 13);
-            int levelR = (int)Math.Ceiling((double)this._levels[1] / (double)short.MaxValue * 13);
-
-            this._peekLevels[0] = this._peekLevels[0] - _decay;
-            if (this._peekLevels[0] < 0)
-                this._peekLevels[0] = 0;
-            if (this._peekLevels[0] < this._levels[0])
-                this._peekLevels[0] = this._levels[0];
-
-            this._peekLevels[1] = this._peekLevels[1] - _decay;
-            if (this._peekLevels[1] < 0)
-                this._peekLevels[1] = 0;
-            if (this._peekLevels[1] < this._levels[0])
-                this._peekLevels[1] = this._levels[0];
-
-            double peekLevelL = Math.Ceiling((double)this._peekLevels[0] / (double)short.MaxValue * 13);
-            double peekLevelR = Math.Ceiling((double)this._peekLevels[1] / (double)short.MaxValue * 13);
-
-            Debug.WriteLine($"{levelL},{peekLevelL},{levelR},{peekLevelR}");
-
-            // Canvasの内容をクリア
-            LevelCanvas.Children.Clear();
-
-            // 左チャンネルの音量メーターを描画
-            for (int i = 0; i < 13; i++)
+            for (int i = 0; i < _levels.Length; i++)
             {
-                System.Windows.Shapes.Rectangle rect = new()
-                {
-                    Width = 34,
-                    Height = 11,
-                    Fill = (0 < this._peekLevels[0] && i == peekLevelL) ? i >= 8 ? Brushes.Red : Brushes.Lime :
-                                i < levelL ? i >= 8 ? Brushes.Crimson : Brushes.LimeGreen : Brushes.DimGray
-                };
-                Canvas.SetLeft(rect, i * 40 + 13);
-                Canvas.SetTop(rect, 10);
-                LevelCanvas.Children.Add(rect);
-            }
+                int normalizedLevel = NormalizeValue(this._levels[i], short.MaxValue, _levelPeek);
+                this._peekLevels[i] = UpdatePeekValue(this._levels[i], this._peekLevels[i], this._levelDecay);
+                int normalizedPeekLevel = NormalizeValue(this._peekLevels[i], short.MaxValue, _levelPeek);
 
-            // 右チャンネルの音量メーターを描画
-            for (int i = 0; i < 13; i++)
-            {
-                System.Windows.Shapes.Rectangle rect = new()
+                for (int j = 0; j < _levelPeek; j++)
                 {
-                    Width = 34,
-                    Height = 11,
-                    Fill = (0 < this._peekLevels[1] && i == peekLevelR) ? i >= 8 ? Brushes.Red : Brushes.Lime :
-                                i < levelR ? i >= 8 ? Brushes.Crimson : Brushes.LimeGreen : Brushes.DimGray
-                };
-                Canvas.SetLeft(rect, i * 40 + 13);
-                Canvas.SetTop(rect, 29);
-                LevelCanvas.Children.Add(rect);
+                    _levelRects[i, j].Fill = (j + 1 == normalizedPeekLevel) ? j >= 8 ? Brushes.Red : Brushes.Lime :
+                        j < normalizedLevel ? j >= 8 ? Brushes.Crimson : Brushes.LimeGreen : Brushes.DimGray;
+                }
             }
         }
 
-        private void InitBass()     // Analyzer class initialization. DO NOT call twice or more.
+        private int NormalizeValue(int value, int maxValue, int count)
+        {
+            return (int)Math.Ceiling(Math.Sqrt((double)value / (double)maxValue) * count);
+        }
+
+        private int UpdatePeekValue(int value, int peekValue, int decay )
+        {
+            peekValue -= decay;
+            if (peekValue < 0)
+                peekValue = 0;
+            if (peekValue < value)
+                peekValue = value;
+            return peekValue;
+        }
+
+        private void InitBass()
         {
             // デバイス情報を取得
             int deviceCount = BassWasapi.BASS_WASAPI_GetDeviceCount();
@@ -145,6 +225,8 @@ namespace WeatherWiser.Views
                 return;
             }
 
+            _mixfreq = defaultDevice.mixfreq;
+            SetParamFromFreq(_mixfreq);
             Bass.BASS_SetConfig(BASSConfig.BASS_CONFIG_UPDATETHREADS, false);
             bool initResult = Bass.BASS_Init(0, defaultDevice.mixfreq, BASSInit.BASS_DEVICE_DEFAULT, IntPtr.Zero);
             if (!initResult)
@@ -160,6 +242,31 @@ namespace WeatherWiser.Views
             {
                 BassWasapi.BASS_WASAPI_Free();
                 Bass.BASS_Free();
+            }
+        }
+
+        // helper function
+        private void SetParamFromFreq(int freq)
+        {
+            if (freq <= 48000)            // 44.1khz, 48khz
+            {
+                _DATAFLAG = _channel > 1 ? BASSData.BASS_DATA_FFT4096 | BASSData.BASS_DATA_FFT_INDIVIDUAL : BASSData.BASS_DATA_FFT2048;
+                _mixfreqMultiplyer = 44100f / freq * 0.25f;
+            }
+            else if (freq <= 96000)       // 88.2khz, 96khz
+            {
+                _DATAFLAG = _channel > 1 ? BASSData.BASS_DATA_FFT8192 | BASSData.BASS_DATA_FFT_INDIVIDUAL : BASSData.BASS_DATA_FFT4096;
+                _mixfreqMultiplyer = 44100f / freq * 0.5f;
+            }
+            else if (freq <= 192000)      // 176.4khz, 192khz
+            {
+                _DATAFLAG = _channel > 1 ? BASSData.BASS_DATA_FFT16384 | BASSData.BASS_DATA_FFT_INDIVIDUAL : BASSData.BASS_DATA_FFT8192;
+                _mixfreqMultiplyer = 44100f / freq;
+            }
+            else                                        // 384khz and above?
+            {
+                _DATAFLAG = _channel > 1 ? BASSData.BASS_DATA_FFT32768 | BASSData.BASS_DATA_FFT_INDIVIDUAL : BASSData.BASS_DATA_FFT16384;
+                _mixfreqMultiplyer = 44100f / freq * 2f;
             }
         }
 
@@ -198,6 +305,40 @@ namespace WeatherWiser.Views
                 return;
             }
 
+            for (int x = 0; x < 16; x++)
+            {
+                for (int y = 0; y < 10; y++)
+                {
+                    System.Windows.Shapes.Rectangle rect = new()
+                    {
+                        Width = 28,
+                        Height = 6,
+                        Fill = Brushes.DimGray
+                    };
+                    Canvas.SetLeft(rect, x * 34 + 3);
+                    Canvas.SetTop(rect, 5 + (9 - y) * 10);
+                    SpectrumCanvas.Children.Add(rect);
+                    _spectrumRects[x, y] = rect;
+                }
+            }
+
+            for (int i = 0; i < 2; i++)
+            {
+                for (int j = 0; j < 13; j++)
+                {
+                    System.Windows.Shapes.Rectangle rect = new()
+                    {
+                        Width = 34,
+                        Height = 10,
+                        Fill = Brushes.DimGray
+                    };
+                    Canvas.SetLeft(rect, j * 40 + 23);
+                    Canvas.SetTop(rect, 5 + (15 * i));
+                    LevelCanvas.Children.Add(rect);
+                    _levelRects[i, j] = rect;
+                }
+            }
+
             System.Threading.Thread.Sleep(500);
             _timer.Start();
         }
@@ -215,7 +356,7 @@ namespace WeatherWiser.Views
         private void OnRendering(object sender, EventArgs e)
         {
             // ウィンドウが有効かどうかを確認
-            if (!this.IsVisible || this.WindowState == WindowState.Minimized)
+            if (!IsWindowVisible())
             {
                 return;
             }
@@ -223,18 +364,36 @@ namespace WeatherWiser.Views
             // カーソルの位置を取得（ディスプレイの絶対座標）
             var cursorPosition = System.Windows.Forms.Cursor.Position;
             // ウィンドウのスクリーン座標を取得
-            var windowPosition = this.PointToScreen(new Point(0, 0));
+            var windowPosition = PointToScreen(new Point(0, 0));
             // ウィンドウの範囲内にカーソルがあるかどうかを判定
-            if (cursorPosition.X >= windowPosition.X && cursorPosition.X <= windowPosition.X + this.ActualWidth &&
-                cursorPosition.Y >= windowPosition.Y && cursorPosition.Y <= windowPosition.Y + this.ActualHeight)
+            if (IsCursorInsideWindow(cursorPosition, windowPosition))
             {
                 // 背景の透過率を変更
-                this.Opacity = 0.2;
+                SetWindowOpacity(0.2);
             }
             else
             {
                 // 背景の透過率を元に戻す
-                this.Opacity = 1.0;
+                SetWindowOpacity(1.0);
+            }
+        }
+
+        private bool IsWindowVisible()
+        {
+            return this.IsVisible && this.WindowState != WindowState.Minimized;
+        }
+
+        private bool IsCursorInsideWindow(System.Drawing.Point cursorPosition, Point windowPosition)
+        {
+            return cursorPosition.X >= windowPosition.X && cursorPosition.X <= windowPosition.X + this.ActualWidth &&
+                   cursorPosition.Y >= windowPosition.Y && cursorPosition.Y <= windowPosition.Y + this.ActualHeight;
+        }
+
+        private void SetWindowOpacity(double opacity)
+        {
+            if (this.Opacity != opacity)
+            {
+                this.Opacity = opacity;
             }
         }
 

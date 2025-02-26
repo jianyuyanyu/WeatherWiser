@@ -13,7 +13,7 @@
         Background="Transparent"
         ShowInTaskbar="False"
         Width="600"
-        Height="480">
+        Height="600">
     <Window.Resources>
         <converters:IconIdToImageSourceConverter x:Key="IconIdToImageSourceConverter"/>
         <Style x:Key="HoverTextBlockStyle" TargetType="TextBlock">
@@ -30,6 +30,7 @@
     </Window.Resources>
     <Grid Margin="4">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -102,7 +103,30 @@
                     Text="{Binding WeatherInfo.CardinalDirection, StringFormat='風向 {0}'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
         </Grid>
 
-        <Canvas Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,5,0,0"
-                Width="540" Height="50" Name="LevelCanvas" />
+        <Canvas Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0"
+                Width="544" Height="35" Name="LevelCanvas">
+            <TextBlock Text="L" FontSize="14" FontWeight="Normal" Foreground="White" Canvas.Left="4" Canvas.Top="1"/>
+            <TextBlock Text="R" FontSize="14" FontWeight="Normal" Foreground="White" Canvas.Left="4" Canvas.Top="16"/>
+        </Canvas>
+
+        <Canvas Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0"
+                Width="544" Height="120" Name="SpectrumCanvas">
+            <TextBlock Text="20" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="12" Canvas.Top="103"/>
+            <TextBlock Text="30" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="46" Canvas.Top="103"/>
+            <TextBlock Text="40" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="80" Canvas.Top="103"/>
+            <TextBlock Text="70" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="114" Canvas.Top="103"/>
+            <TextBlock Text="120" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="144" Canvas.Top="103"/>
+            <TextBlock Text="190" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="178" Canvas.Top="103"/>
+            <TextBlock Text="310" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="212" Canvas.Top="103"/>
+            <TextBlock Text="490" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="246" Canvas.Top="103"/>
+            <TextBlock Text="780" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="280" Canvas.Top="103"/>
+            <TextBlock Text="1.2k" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="314" Canvas.Top="103"/>
+            <TextBlock Text="1.9k" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="348" Canvas.Top="103"/>
+            <TextBlock Text="3.1k" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="382" Canvas.Top="103"/>
+            <TextBlock Text="5.0k" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="416" Canvas.Top="103"/>
+            <TextBlock Text="7.9k" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="450" Canvas.Top="103"/>
+            <TextBlock Text="12k" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="485" Canvas.Top="103"/>
+            <TextBlock Text="20k" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="520" Canvas.Top="103"/>
+        </Canvas>
     </Grid>
 </Window>
