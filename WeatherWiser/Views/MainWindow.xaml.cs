@@ -21,8 +21,6 @@ namespace WeatherWiser.Views
         // コードページ
         private readonly bool UNICODE = true;
         // 音量レベルの減衰値
-        private readonly short _spectrumDecay = 10;
-        // 音量レベルの減衰値
         private readonly short _levelDecay = 500;
         // 画面表示更新用タイマー
         private readonly DispatcherTimer _timer;
@@ -34,6 +32,8 @@ namespace WeatherWiser.Views
         private readonly int[] _peekLevels = [0, 0];
         // 音量レベルの矩形
         private readonly System.Windows.Shapes.Rectangle[,] _levelRects = new System.Windows.Shapes.Rectangle[2, 13];
+        // スペクトラムの減衰値
+        private readonly short _spectrumDecay = 10;
         // スペクトラムのバー数
         private readonly int _numberOfBar = 16;
         // スペクトラムの高さ
@@ -50,8 +50,8 @@ namespace WeatherWiser.Views
         private int _mixfreq;
         // ミックス周波数の倍率
         private float _mixfreqMultiplyer;
-        // FFTデータ
-        private readonly float[] _fft = new float[16384 * 2/*channel*/];
+        // FFTデータ(2ch)
+        private readonly float[] _fft = new float[16384 * 2];
         // FFTデータ取得フラグ
         private BASSData _DATAFLAG;
         // スペクトラムデータの周波数倍率
