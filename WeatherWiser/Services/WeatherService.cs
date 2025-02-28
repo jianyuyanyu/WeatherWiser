@@ -1,10 +1,8 @@
-﻿using System;
-using System.Configuration;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using WeatherWiser.Models;
-using Windows.ApplicationModel.Background;
 
 namespace WeatherWiser.Services
 {
@@ -14,6 +12,7 @@ namespace WeatherWiser.Services
 
         public WeatherService()
         {
+            // APIキーを環境変数から取得
             apiKey = Environment.GetEnvironmentVariable("WEATHER_API_KEY");
             if (string.IsNullOrEmpty(apiKey))
             {
@@ -23,6 +22,7 @@ namespace WeatherWiser.Services
 
         public async Task<WeatherInfo> GetWeatherAsync(string city)
         {
+            // OpenWeather の API を呼び出して JSON 形式の天気情報を取得
             using HttpClient client = new();
             string url = $"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={apiKey}&units=metric&lang=en";
             HttpResponseMessage response = await client.GetAsync(url);
@@ -30,6 +30,7 @@ namespace WeatherWiser.Services
             string responseBody = await response.Content.ReadAsStringAsync();
             JObject weatherData = JObject.Parse(responseBody);
 
+            // 降雨量と降雪量をどちらも降雨量として簡略化
             double precipitationProbability = 0;
             if (weatherData["rain"] != null && weatherData["rain"]["1h"] != null)
             {
@@ -40,6 +41,7 @@ namespace WeatherWiser.Services
                 precipitationProbability = (double)weatherData["snow"]["1h"];
             }
 
+            // WeatherInfo クラスに天気情報を格納
             return new WeatherInfo
             {
                 Main = weatherData["weather"][0]["main"].ToString(),
