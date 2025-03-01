@@ -139,7 +139,7 @@ namespace WeatherWiser.Views
                     {
                         Width = 28,
                         Height = 6,
-                        Opacity = 0.6,
+                        Opacity = 0.8,
                         Fill = Brushes.DimGray
                     };
                     Canvas.SetLeft(rect, x * 34 + 3);
@@ -160,7 +160,7 @@ namespace WeatherWiser.Views
                     {
                         Width = 34,
                         Height = 10,
-                        Opacity = 0.6,
+                        Opacity = 0.8,
                         Fill = Brushes.DimGray,
                     };
                     Canvas.SetLeft(rect, j * 40 + 23);
@@ -312,7 +312,7 @@ namespace WeatherWiser.Views
                 _spectrumdata.Add((byte)powerY);
             }
 
-            //Debug.WriteLine(string.Join(",", peeks));
+            Debug.WriteLine(string.Join(",", peeks));
             //Debug.WriteLine(string.Join(",", _spectrumdata));
 
             // 周波数スペクトラムの描画
