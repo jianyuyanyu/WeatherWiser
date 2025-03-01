@@ -139,6 +139,7 @@ namespace WeatherWiser.Views
                     {
                         Width = 28,
                         Height = 6,
+                        Opacity = 0.6,
                         Fill = Brushes.DimGray
                     };
                     Canvas.SetLeft(rect, x * 34 + 3);
@@ -159,7 +160,8 @@ namespace WeatherWiser.Views
                     {
                         Width = 34,
                         Height = 10,
-                        Fill = Brushes.DimGray
+                        Opacity = 0.6,
+                        Fill = Brushes.DimGray,
                     };
                     Canvas.SetLeft(rect, j * 40 + 23);
                     Canvas.SetTop(rect, 5 + (15 * i));
@@ -232,37 +234,24 @@ namespace WeatherWiser.Views
         private void SetParamFromFreq(int freq)
         {
             // ミックス周波数に応じてFFTデータのサンプル数とミックス周波数倍率を設定
-            if (freq <= 48000)
+            switch (freq)
             {
-                // ~48khz
-                _DATAFLAG = _channel > 1 ? 
-                    BASSData.BASS_DATA_FFT4096 | BASSData.BASS_DATA_FFT_INDIVIDUAL : 
-                    BASSData.BASS_DATA_FFT2048;
-                _mixfreqMultiplyer = 44100f / freq * 0.25f;
-            }
-            else if (freq <= 96000)
-            {
-                // ~96khz
-                _DATAFLAG = _channel > 1 ? 
-                    BASSData.BASS_DATA_FFT8192 | BASSData.BASS_DATA_FFT_INDIVIDUAL : 
-                    BASSData.BASS_DATA_FFT4096;
-                _mixfreqMultiplyer = 44100f / freq * 0.5f;
-            }
-            else if (freq <= 192000)
-            {
-                // ~192khz
-                _DATAFLAG = _channel > 1 ? 
-                    BASSData.BASS_DATA_FFT16384 | BASSData.BASS_DATA_FFT_INDIVIDUAL : 
-                    BASSData.BASS_DATA_FFT8192;
-                _mixfreqMultiplyer = 44100f / freq * 1f;
-            }
-            else
-            {
-                // ~
-                _DATAFLAG = _channel > 1 ? 
-                    BASSData.BASS_DATA_FFT32768 | BASSData.BASS_DATA_FFT_INDIVIDUAL : 
-                    BASSData.BASS_DATA_FFT16384;
-                _mixfreqMultiplyer = 44100f / freq * 2f;
+                case <= 48000:  // ~48khz
+                    _DATAFLAG = BASSData.BASS_DATA_FFT2048;  // 2048 サンプル FFT
+                    _mixfreqMultiplyer = 2048f / 48000f;
+                    break;
+                case <= 96000:  // ~96khz
+                    _DATAFLAG = BASSData.BASS_DATA_FFT4096;  // 4096 サンプル FFT
+                    _mixfreqMultiplyer = 4096f / 48000f;
+                    break;
+                case <= 192000: // ~192khz
+                    _DATAFLAG = BASSData.BASS_DATA_FFT8192;  // 8192 サンプル FFT
+                    _mixfreqMultiplyer = 8192f / 48000f;
+                    break;
+                default:        // ~
+                    _DATAFLAG = BASSData.BASS_DATA_FFT16384; // 16384 サンプル FFT
+                    _mixfreqMultiplyer = 16384f / 48000f;
+                    break;
             }
         }
 
@@ -289,65 +278,44 @@ namespace WeatherWiser.Views
             int freqValue = 1;
             // スペクトラムデータのクリア
             _spectrumdata.Clear();
+
+            float[] peeks = new float[_numberOfBar];
+
             // バンドごとのピーク値を取得
             for (int bandX = 0; bandX < _numberOfBar; bandX++)
             {
-                float[] peak = [0f, 0f];
+                peeks[bandX] = 0;
 
-                // バンドごとにFFTバッファから取得する周波数範囲の上限を対数スケールで計算
-                // Math.Pow(2, (bandX * 10.0 / (_numberOfBar - 1)) + _freqShift) で 20hz~20khz の対数スケールの近似値を取得
-                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_numberOfBar - 1)) + _freqShift) / 5/*謎*/ * _mixfreqMultiplyer);
+                // Math.Pow(...) で 20hz~20khz の対数スケールの近似値を取得し、ミックス周波数に応じた倍率を掛ける
+                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_numberOfBar)) + _freqShift) * _mixfreqMultiplyer);
                 if (freqValue <= freqPos)
                     freqValue = freqPos + 1;
 
-                // ミックス周波数に応じてFFTバッファから取得する周波数範囲の上限を調整（チャンネル数考慮あり）
-                if (_mixfreq <= 48000)
+                // ミックス周波数に応じてFFTバッファから取得する周波数範囲の上限を調整
+                freqValue = _mixfreq switch
                 {
-                    // ~48khz
-                    if (freqValue > 2048 * _channel - _channel)
-                        freqValue = 2048 * _channel - _channel;
-                }
-                else if (_mixfreq <= 96000)
+                    <= 48000 => Math.Min(freqValue, 2048),
+                    <= 96000 => Math.Min(freqValue, 4096),
+                    <= 192000 => Math.Min(freqValue, 8192),
+                    _ => Math.Min(freqValue, 16384),
+                };
+
+                // 周波数範囲の上限までのFFTバッファを走査してピーク値を取得
+                for (; freqPos < freqValue; freqPos++)
                 {
-                    // ~96khz
-                    if (freqValue > 4096 * _channel - _channel)
-                        freqValue = 4096 * _channel - _channel;
-                }
-                else if (_mixfreq <= 192000)
-                {
-                    // ~192khz
-                    if (freqValue > 8192 * _channel - _channel)
-                        freqValue = 8192 * _channel - _channel;
-                }
-                else
-                {
-                    // ~
-                    if (freqValue > 16384 * _channel - _channel)
-                        freqValue = 16384 * _channel - _channel;
+                    peeks[bandX] = Math.Max(peeks[bandX], _fft[1 + freqPos]);
                 }
 
-                // 周波数範囲の上限までのFFTバッファを走査してピーク値を取得（チャンネル数考慮あり）
-                for (; freqPos < freqValue; freqPos += _channel)
-                {
-                    for (int i = 0; i < _channel; i++)
-                    {
-                        if (peak[0] < _fft[1 + freqPos])
-                            peak[0] = _fft[1 + freqPos];
-                        if (peak[1] < _fft[1 + freqPos + (_channel - 1)])
-                            peak[1] = _fft[1 + freqPos + (_channel - 1)];
-                    }
-                }
-
-                // ピーク値の平方根を増幅して0～255の範囲の値に変換（チャンネル数考慮あり）
-                for (int i = 0; i < _channel; i++)
-                {
-                    int powerY = (int)(Math.Sqrt(peak[i]) * 3 * 255 - 4);
-                    powerY = Math.Max(Math.Min(powerY, byte.MaxValue), byte.MinValue);
-                    _spectrumdata.Add((byte)powerY);
-                }
+                // ピーク値の平方根を増幅して0～255の範囲の値に変換（*3と-4は調整値）
+                int powerY = (int)(Math.Sqrt(peeks[bandX]) * 3 * 255 - 4);
+                powerY = Math.Max(Math.Min(powerY, byte.MaxValue), byte.MinValue);
+                _spectrumdata.Add((byte)powerY);
             }
 
-            // 周波数スペクトラムの描画（チャンネル数考慮なし）
+            //Debug.WriteLine(string.Join(",", peeks));
+            //Debug.WriteLine(string.Join(",", _spectrumdata));
+
+            // 周波数スペクトラムの描画
             for (int x = 0; x < _numberOfBar; x++)
             {
                 // バンド値の正規化
@@ -401,10 +369,7 @@ namespace WeatherWiser.Views
         {
             // 音量レベルのピーク値を更新
             peekValue -= decay;
-            if (peekValue < 0)
-                peekValue = 0;
-            if (peekValue < value)
-                peekValue = value;
+            peekValue = Math.Max(Math.Max(peekValue, 0), value);
             return peekValue;
         }
 
