@@ -294,8 +294,9 @@ namespace WeatherWiser.Views
             {
                 float[] peak = [0f, 0f];
 
-                // バンドごとにFFTバッファから取得する周波数範囲の上限を対数スケールで計算（÷5は何？）
-                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_numberOfBar - 1)) + _freqShift) / 5 * _mixfreqMultiplyer);
+                // バンドごとにFFTバッファから取得する周波数範囲の上限を対数スケールで計算
+                // Math.Pow(2, (bandX * 10.0 / (_numberOfBar - 1)) + _freqShift) で 20hz~20khz の対数スケールの近似値を取得
+                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_numberOfBar - 1)) + _freqShift) / 5/*謎*/ * _mixfreqMultiplyer);
                 if (freqValue <= freqPos)
                     freqValue = freqPos + 1;
 
@@ -303,12 +304,18 @@ namespace WeatherWiser.Views
                 if (_mixfreq <= 48000)
                 {
                     // ~48khz
-                    if (freqValue > 4096 * _channel - _channel)
-                        freqValue = 4096 * _channel - _channel;
+                    if (freqValue > 2048 * _channel - _channel)
+                        freqValue = 2048 * _channel - _channel;
                 }
                 else if (_mixfreq <= 96000)
                 {
                     // ~96khz
+                    if (freqValue > 4096 * _channel - _channel)
+                        freqValue = 4096 * _channel - _channel;
+                }
+                else if (_mixfreq <= 192000)
+                {
+                    // ~192khz
                     if (freqValue > 8192 * _channel - _channel)
                         freqValue = 8192 * _channel - _channel;
                 }
