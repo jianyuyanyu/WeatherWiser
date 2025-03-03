@@ -58,9 +58,8 @@ namespace WeatherWiser.Views
         private readonly float[] _fft = new float[16384 * 2];
         // FFTデータ取得フラグ
         private BASSData _DATAFLAG;
-        // スペクトラムデータの周波数倍率
-        // およそ20Hz～20KHzの対数スケールとするため
-        // log(20,2)≒4.32～log(20000,2)≒14.29の範囲を参考に14.29-10=4.29としている）
+        // 可聴域の周波数倍率
+        // 約20Hz～20KHzの対数スケールとするため、log(20,2)≒4.32～log(20000,2)≒14.29の範囲をもとに14.29-10=4.29としている）
         private readonly float _freqShift = (float)Math.Round(Math.Log(20000, 2) - 10, 2); // = 4.29
 
         public MainWindow()
@@ -181,8 +180,7 @@ namespace WeatherWiser.Views
         {
             // デバイス情報に Unicode 文字セットを使用する
             Bass.BASS_SetConfig(BASSConfig.BASS_CONFIG_UNICODE, UNICODE);
-            // デバイス情報を取得
-            // 既定のサウンドデバイスと同名でループバックに対応したデバイスを選択
+            // 既定のデバイスを特定
             int deviceCount = BassWasapi.BASS_WASAPI_GetDeviceCount();
             BASS_WASAPI_DEVICEINFO defaultDevice = null;
             for (int i = 0; i < deviceCount; i++)
@@ -190,6 +188,7 @@ namespace WeatherWiser.Views
                 var device = BassWasapi.BASS_WASAPI_GetDeviceInfo(i);
                 if (device != null)
                 {
+                    // 既定のサウンドデバイスと同名でループバックに対応したデバイスを選択
                     if ((device.IsDefault && device.IsEnabled && device.IsLoopback) ||
                         (defaultDevice != null && device.IsLoopback))
                     {
@@ -216,7 +215,7 @@ namespace WeatherWiser.Views
 
             // デバイス情報からミックス周波数を取得
             _mixfreq = defaultDevice.mixfreq;
-            // ミックス周波数に応じてFFTデータのサンプル数とミックス周波数倍率を設定
+            // ミックス周波数に応じてFFTデータのサンプル数とFFTバッファ倍率を設定
             SetParamFromFreq(_mixfreq);
             // 再生バッファの更新に使用するスレッド数を設定
             Bass.BASS_SetConfig(BASSConfig.BASS_CONFIG_UPDATETHREADS, false);
@@ -233,7 +232,9 @@ namespace WeatherWiser.Views
 
         private void SetParamFromFreq(int freq)
         {
-            // ミックス周波数に応じてFFTデータのサンプル数とミックス周波数倍率を設定
+            // デバイスが 48000Hz の場合、音声の 16000Hz は FFT2048 で 2048 * 16000 / 48000 = 682 要素目あたりになる
+            // 音声の 16000Hz が可変となるため、事前に FFTサンプル数 / ミックス周波数 を計算して保持しておく
+
             switch (freq)
             {
                 case <= 48000:  // ~48khz
@@ -286,8 +287,8 @@ namespace WeatherWiser.Views
             {
                 peeks[bandX] = 0;
 
-                // Math.Pow(...) で 20hz~20khz の対数スケールの近似値を取得し、ミックス周波数に応じた倍率を掛ける
-                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_numberOfBar-1)) + _freqShift) * _mixfreqMultiplyer);
+                // Math.Pow(...) で 20hz~20khz の対数スケールの近似値を取得し、ミックス周波数とFFTサンプル数に応じた倍率を掛ける
+                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_numberOfBar - 1)) + _freqShift) * _mixfreqMultiplyer);
                 if (freqValue <= freqPos)
                     freqValue = freqPos + 1;
 
