@@ -238,19 +238,19 @@ namespace WeatherWiser.Views
             {
                 case <= 48000:  // ~48khz
                     _DATAFLAG = BASSData.BASS_DATA_FFT2048;  // 2048 サンプル FFT
-                    _mixfreqMultiplyer = 2048f / 48000f;
+                    _mixfreqMultiplyer = 2048f / freq;
                     break;
                 case <= 96000:  // ~96khz
                     _DATAFLAG = BASSData.BASS_DATA_FFT4096;  // 4096 サンプル FFT
-                    _mixfreqMultiplyer = 4096f / 48000f;
+                    _mixfreqMultiplyer = 4096f / freq;
                     break;
                 case <= 192000: // ~192khz
                     _DATAFLAG = BASSData.BASS_DATA_FFT8192;  // 8192 サンプル FFT
-                    _mixfreqMultiplyer = 8192f / 48000f;
+                    _mixfreqMultiplyer = 8192f / freq;
                     break;
                 default:        // ~
                     _DATAFLAG = BASSData.BASS_DATA_FFT16384; // 16384 サンプル FFT
-                    _mixfreqMultiplyer = 16384f / 48000f;
+                    _mixfreqMultiplyer = 16384f / freq;
                     break;
             }
         }
@@ -287,7 +287,7 @@ namespace WeatherWiser.Views
                 peeks[bandX] = 0;
 
                 // Math.Pow(...) で 20hz~20khz の対数スケールの近似値を取得し、ミックス周波数に応じた倍率を掛ける
-                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_numberOfBar)) + _freqShift) * _mixfreqMultiplyer);
+                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_numberOfBar-1)) + _freqShift) * _mixfreqMultiplyer);
                 if (freqValue <= freqPos)
                     freqValue = freqPos + 1;
 
