@@ -20,6 +20,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
@@ -28,32 +29,34 @@
 
         <CheckBox Name="AlwaysOnTopCheckBox" Content="Always on Top" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,10" IsChecked="{Binding AlwaysOnTop, UpdateSourceTrigger=PropertyChanged}"/>
 
-        <TextBlock Text="Clock Update Interval (ms):" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
-        <TextBox Name="IntervalTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,10" Text="{Binding ClockUpdateInterval, UpdateSourceTrigger=PropertyChanged}"/>
+        <CheckBox Name="AutoStartupCheckBox" Content="Auto Startup" Grid.Row="1" Grid.ColumnSpan="2" Margin="0,0,0,10" IsChecked="{Binding AutoStartup, UpdateSourceTrigger=PropertyChanged}"/>
 
-        <TextBlock Text="Window Position:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
-        <ComboBox Name="WindowPositionComboBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,10" SelectedValue="{Binding WindowPosition, UpdateSourceTrigger=PropertyChanged}" SelectedValuePath="Content">
+        <TextBlock Text="Clock Update Interval (ms):" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+        <TextBox Name="IntervalTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,10" Text="{Binding ClockUpdateInterval, UpdateSourceTrigger=PropertyChanged}"/>
+
+        <TextBlock Text="Window Position:" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+        <ComboBox Name="WindowPositionComboBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,10" SelectedValue="{Binding WindowPosition, UpdateSourceTrigger=PropertyChanged}" SelectedValuePath="Content">
             <ComboBoxItem Content="TopLeft"/>
             <ComboBoxItem Content="TopRight"/>
             <ComboBoxItem Content="BottomLeft"/>
             <ComboBoxItem Content="BottomRight"/>
         </ComboBox>
 
-        <TextBlock Text="Horizontal Offset (px):" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
-        <TextBox Name="HorizontalOffsetTextBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,10" Text="{Binding HorizontalOffset, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBlock Text="Horizontal Offset (px):" Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+        <TextBox Name="HorizontalOffsetTextBox" Grid.Row="4" Grid.Column="1" Margin="0,0,0,10" Text="{Binding HorizontalOffset, UpdateSourceTrigger=PropertyChanged}"/>
 
-        <TextBlock Text="Vertical Offset (px):" Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
-        <TextBox Name="VerticalOffsetTextBox" Grid.Row="4" Grid.Column="1" Margin="0,0,0,10" Text="{Binding VerticalOffset, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBlock Text="Vertical Offset (px):" Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+        <TextBox Name="VerticalOffsetTextBox" Grid.Row="5" Grid.Column="1" Margin="0,0,0,10" Text="{Binding VerticalOffset, UpdateSourceTrigger=PropertyChanged}"/>
 
-        <TextBlock Text="Font Size:" Grid.Row="5" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
-        <TextBox Name="FontSizeTextBox" Grid.Row="5" Grid.Column="1" Margin="0,0,0,10" Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBlock Text="Font Size:" Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+        <TextBox Name="FontSizeTextBox" Grid.Row="6" Grid.Column="1" Margin="0,0,0,10" Text="{Binding FontSize, UpdateSourceTrigger=PropertyChanged}"/>
 
-        <TextBlock Text="Display:" Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
-        <ComboBox Name="DisplayComboBox" Grid.Row="6" Grid.Column="1" Margin="0,0,0,10" ItemsSource="{Binding Displays}" SelectedValue="{Binding SelectedDisplay, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBlock Text="Display:" Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+        <ComboBox Name="DisplayComboBox" Grid.Row="7" Grid.Column="1" Margin="0,0,0,10" ItemsSource="{Binding Displays}" SelectedValue="{Binding SelectedDisplay, UpdateSourceTrigger=PropertyChanged}"/>
 
-        <TextBlock Text="City:" Grid.Row="7" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
-        <TextBox Name="CityTextBox" Grid.Row="7" Grid.Column="1" Margin="0,0,0,10" Text="{Binding City, UpdateSourceTrigger=PropertyChanged}"/>
+        <TextBlock Text="City:" Grid.Row="8" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,10,0"/>
+        <TextBox Name="CityTextBox" Grid.Row="8" Grid.Column="1" Margin="0,0,0,10" Text="{Binding City, UpdateSourceTrigger=PropertyChanged}"/>
 
-        <Button Content="Save" Grid.Row="8" Grid.ColumnSpan="2" Width="100" HorizontalAlignment="Center" Click="SaveButton_Click"/>
+        <Button Content="Save" Grid.Row="9" Grid.ColumnSpan="2" Width="100" HorizontalAlignment="Center" Click="SaveButton_Click"/>
     </Grid>
 </Window>

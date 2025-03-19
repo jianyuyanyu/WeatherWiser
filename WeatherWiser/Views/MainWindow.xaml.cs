@@ -204,9 +204,9 @@ namespace WeatherWiser.Views
                 }
             }
 
-            if (defaultDevice == null)
+            if (defaultDevice == null || !defaultDevice.IsLoopback)
             {
-                MessageBox.Show("音声出力デバイスが見つかりません。", "エラー", 
+                MessageBox.Show("ループバックに対応した音声出力デバイスが見つかりません。", "エラー", 
                     MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -311,8 +311,8 @@ namespace WeatherWiser.Views
                 _spectrumdata.Add((byte)powerY);
             }
 
-            Debug.WriteLine(string.Join(",", peeks));
-            //Debug.WriteLine(string.Join(",", _spectrumdata));
+            //Debug.WriteLine(string.Join(",", peeks));
+            Debug.WriteLine(string.Join(",", _spectrumdata));
 
             // 周波数スペクトラムの描画
             for (int x = 0; x < _numberOfBar; x++)
