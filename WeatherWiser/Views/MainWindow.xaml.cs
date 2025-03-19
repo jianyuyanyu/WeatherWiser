@@ -48,8 +48,6 @@ namespace WeatherWiser.Views
         private readonly List<byte> _spectrumdata = [];
         // スペクトラムの矩形
         private readonly System.Windows.Shapes.Rectangle[,] _spectrumRects = new System.Windows.Shapes.Rectangle[16, 10];
-        // チャンネル数(1:mono or mix 2:stereo)
-        private readonly int _channel = 1;
         // ミックス周波数
         private int _mixfreq;
         // ミックス周波数の倍率
