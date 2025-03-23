@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,6 +10,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using Un4seen.Bass;
 using Un4seen.BassWasapi;
+using WeatherWiser.Models;
 
 namespace WeatherWiser.Views
 {
@@ -24,6 +26,8 @@ namespace WeatherWiser.Views
         private readonly WASAPIPROC _process;
         // コードページ
         private readonly bool UNICODE = true;
+        // 周波数関連
+        private FreqParams _freqParams;
         // 音量レベルの減衰値
         private readonly short _levelDecay = 500;
         // 画面表示更新用タイマー
@@ -36,29 +40,20 @@ namespace WeatherWiser.Views
         private readonly int[] _peekLevels = [0, 0];
         // 音量レベルの矩形
         private readonly System.Windows.Shapes.Rectangle[,] _levelRects = new System.Windows.Shapes.Rectangle[2, 13];
+        // FFTデータ(2ch)
+        private readonly float[] _fft = new float[16384 * 2];
         // スペクトラムの減衰値
         private readonly short _spectrumDecay = 10;
         // スペクトラムのバー数
         private readonly int _numberOfBar = 16;
-        // スペクトラムの高さ
-        private readonly int _spectrumHeight = 10;
+        // スペクトラムのピーク値
+        private readonly int _spectrumPeek = 10;
+        // スペクトラムデータ
+        private readonly int[] _spectrums = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
         // スペクトラム（ピーク時）
         private readonly int[] _peekSpectrums = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-        // スペクトラムデータ
-        private readonly List<byte> _spectrumdata = [];
         // スペクトラムの矩形
         private readonly System.Windows.Shapes.Rectangle[,] _spectrumRects = new System.Windows.Shapes.Rectangle[16, 10];
-        // ミックス周波数
-        private int _mixfreq;
-        // ミックス周波数の倍率
-        private float _mixfreqMultiplyer;
-        // FFTデータ(2ch)
-        private readonly float[] _fft = new float[16384 * 2];
-        // FFTデータ取得フラグ
-        private BASSData _DATAFLAG;
-        // 可聴域の周波数倍率
-        // 約20Hz～20KHzの対数スケールとするため、log(20,2)≒4.32～log(20000,2)≒14.29の範囲をもとに14.29-10=4.29としている）
-        private readonly float _freqShift = (float)Math.Round(Math.Log(20000, 2) - 10, 2); // = 4.29
 
         public MainWindow()
         {
@@ -212,45 +207,16 @@ namespace WeatherWiser.Views
             }
 
             // デバイス情報からミックス周波数を取得
-            _mixfreq = defaultDevice.mixfreq;
-            // ミックス周波数に応じてFFTデータのサンプル数とFFTバッファ倍率を設定
-            SetParamFromFreq(_mixfreq);
+            _freqParams = new FreqParams(defaultDevice.mixfreq);
             // 再生バッファの更新に使用するスレッド数を設定
             Bass.BASS_SetConfig(BASSConfig.BASS_CONFIG_UPDATETHREADS, false);
             // BASS デバイスの初期化
-            bool initResult = Bass.BASS_Init(0, defaultDevice.mixfreq, 
-                    BASSInit.BASS_DEVICE_DEFAULT, IntPtr.Zero);
+            bool initResult = Bass.BASS_Init(0, defaultDevice.mixfreq, BASSInit.BASS_DEVICE_DEFAULT, IntPtr.Zero);
             if (!initResult)
             {
                 var error = Bass.BASS_ErrorGetCode();
                 MessageBox.Show($"BASS 音声出力デバイス初期化時エラーコード: {error}", "エラー", 
                     MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private void SetParamFromFreq(int freq)
-        {
-            // デバイスが 48000Hz の場合、音声の 16000Hz は FFT2048 で 2048 * 16000 / 48000 = 682 要素目あたりになる
-            // 音声の 16000Hz が可変となるため、事前に FFTサンプル数 / ミックス周波数 を計算して保持しておく
-
-            switch (freq)
-            {
-                case <= 48000:  // ~48khz
-                    _DATAFLAG = BASSData.BASS_DATA_FFT2048;  // 2048 サンプル FFT
-                    _mixfreqMultiplyer = 2048f / freq;
-                    break;
-                case <= 96000:  // ~96khz
-                    _DATAFLAG = BASSData.BASS_DATA_FFT4096;  // 4096 サンプル FFT
-                    _mixfreqMultiplyer = 4096f / freq;
-                    break;
-                case <= 192000: // ~192khz
-                    _DATAFLAG = BASSData.BASS_DATA_FFT8192;  // 8192 サンプル FFT
-                    _mixfreqMultiplyer = 8192f / freq;
-                    break;
-                default:        // ~
-                    _DATAFLAG = BASSData.BASS_DATA_FFT16384; // 16384 サンプル FFT
-                    _mixfreqMultiplyer = 16384f / freq;
-                    break;
             }
         }
 
@@ -265,7 +231,7 @@ namespace WeatherWiser.Views
         private void UpdateSpectrumCanvas()
         {
             // FFTデータの取得
-            int ret = BassWasapi.BASS_WASAPI_GetData(_fft, (int)_DATAFLAG);
+            int ret = BassWasapi.BASS_WASAPI_GetData(_fft, (int)_freqParams.BassData);
             if (ret < -1)
             {
                 return;
@@ -275,56 +241,37 @@ namespace WeatherWiser.Views
             int freqPos = 0;
             // 走査する周波数範囲の上限
             int freqValue = 1;
-            // スペクトラムデータのクリア
-            _spectrumdata.Clear();
-
-            float[] peeks = new float[_numberOfBar];
-
+            // バンドのピーク値
+            float peek = 0;
             // バンドごとのピーク値を取得
             for (int bandX = 0; bandX < _numberOfBar; bandX++)
             {
-                peeks[bandX] = 0;
-
                 // Math.Pow(...) で 20hz~20khz の対数スケールの近似値を取得し、ミックス周波数とFFTサンプル数に応じた倍率を掛ける
-                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_numberOfBar - 1)) + _freqShift) * _mixfreqMultiplyer);
-                if (freqValue <= freqPos)
-                    freqValue = freqPos + 1;
-
-                // ミックス周波数に応じてFFTバッファから取得する周波数範囲の上限を調整
-                freqValue = _mixfreq switch
-                {
-                    <= 48000 => Math.Min(freqValue, 2048),
-                    <= 96000 => Math.Min(freqValue, 4096),
-                    <= 192000 => Math.Min(freqValue, 8192),
-                    _ => Math.Min(freqValue, 16384),
-                };
-
+                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_numberOfBar - 1)) + _freqParams.FreqShift) * _freqParams.MixFreqMultiplyer);
+                // FFTバッファから取得する周波数範囲の上限を調整
+                freqValue = freqValue <= freqPos ? freqPos + 1 : Math.Min(freqValue, _freqParams.MaxFftLength);
                 // 周波数範囲の上限までのFFTバッファを走査してピーク値を取得
-                for (; freqPos < freqValue; freqPos++)
-                {
-                    peeks[bandX] = Math.Max(peeks[bandX], _fft[1 + freqPos]);
-                }
-
-                // ピーク値の平方根を増幅して0～255の範囲の値に変換（*3と-4は調整値）
-                int powerY = (int)(Math.Sqrt(peeks[bandX]) * 3 * 255 - 4);
-                powerY = Math.Max(Math.Min(powerY, byte.MaxValue), byte.MinValue);
-                _spectrumdata.Add((byte)powerY);
+                peek = _fft.Skip(freqPos).Take(freqValue - freqPos).Max();
+                // 走査位置を更新
+                freqPos = freqValue;
+                // ピーク値の平方根を増幅して0～255の範囲の値に変換（*3と-4は調整値?）
+                int powerY = (int)(Math.Sqrt(peek) * 3 * 255 - 4);
+                _spectrums[bandX] = Math.Max(Math.Min(powerY, byte.MaxValue), byte.MinValue);
             }
 
-            //Debug.WriteLine(string.Join(",", peeks));
-            Debug.WriteLine(string.Join(",", _spectrumdata));
+            Debug.WriteLine(string.Join(",", _spectrums));
 
             // 周波数スペクトラムの描画
             for (int x = 0; x < _numberOfBar; x++)
             {
                 // バンド値の正規化
-                int spectrum = NormalizeValue(this._spectrumdata[x], byte.MaxValue, _spectrumHeight);
+                int spectrum = NormalizeValue(this._spectrums[x], byte.MaxValue, _spectrumPeek);
                 // 最大バンド値の更新（パラパラ降ってくる表現のため）
-                this._peekSpectrums[x] = UpdatePeekValue(this._spectrumdata[x], this._peekSpectrums[x], this._spectrumDecay);
+                this._peekSpectrums[x] = UpdatePeekValue(this._spectrums[x], this._peekSpectrums[x], this._spectrumDecay);
                 // 最大バンド値の正規化
-                int peekSpectrum = NormalizeValue(this._peekSpectrums[x], byte.MaxValue, _spectrumHeight);
+                int peekSpectrum = NormalizeValue(this._peekSpectrums[x], byte.MaxValue, _spectrumPeek);
                 // バンド値に応じて矩形の色を変更
-                for (int y = 0; y < _spectrumHeight; y++)
+                for (int y = 0; y < _spectrumPeek; y++)
                 {
                     _spectrumRects[x, y].Fill = y + 1 == peekSpectrum ? Brushes.Lime :
                         y < spectrum ? Brushes.LimeGreen : Brushes.DimGray;
