@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -26,12 +25,12 @@ namespace WeatherWiser.Views
         private readonly WASAPIPROC _process;
         // コードページ
         private readonly bool UNICODE = true;
+        // 画面表示更新用タイマー
+        private readonly DispatcherTimer _timer;
         // 周波数関連
         private FreqParams _freqParams;
         // 音量レベルの減衰値
         private readonly short _levelDecay = 500;
-        // 画面表示更新用タイマー
-        private readonly DispatcherTimer _timer;
         // 音量レベルのピーク値
         private readonly int _levelPeek = 13;
         // 音量レベル
@@ -44,8 +43,6 @@ namespace WeatherWiser.Views
         private readonly float[] _fft = new float[16384 * 2];
         // スペクトラムの減衰値
         private readonly short _spectrumDecay = 10;
-        // スペクトラムのバー数
-        private readonly int _numberOfBar = 16;
         // スペクトラムのピーク値
         private readonly int _spectrumPeek = 10;
         // スペクトラムデータ
@@ -92,33 +89,12 @@ namespace WeatherWiser.Views
                 return;
             }
 
-            // BASS WASAPIの初期化(コールバック関数を指定)
-            bool initResult = BassWasapi.BASS_WASAPI_Init(_devicenumber, 0, 0, BASSWASAPIInit.BASS_WASAPI_BUFFER, 1f, 0.05f, _process, IntPtr.Zero);
-            if (!initResult)
-            {
-                var error = Bass.BASS_ErrorGetCode();
-                MessageBox.Show($"BASS WASAPI初期化エラーコード: {error}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            // BASS WASAPIの開始
-            bool startResult = BassWasapi.BASS_WASAPI_Start();
-            if (!startResult)
-            {
-                var error = Bass.BASS_ErrorGetCode();
-                MessageBox.Show($"BASS WASAPI開始時エラーコード: {error}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
             // スペクトラムの矩形を初期化
             InitializeSpectrumRectangles();
-
             // 音量レベルの矩形を初期化
             InitializeLevelRectangles();
-
-            // タイマーを開始
-            System.Threading.Thread.Sleep(500);
-            _timer.Start();
+            // BASS 開始
+            StartBass();
         }
 
         private void InitializeSpectrumRectangles()
@@ -183,7 +159,7 @@ namespace WeatherWiser.Views
                 {
                     // 既定のサウンドデバイスと同名でループバックに対応したデバイスを選択
                     if ((device.IsDefault && device.IsEnabled && device.IsLoopback) ||
-                        (defaultDevice != null && device.IsLoopback))
+                        (defaultDevice != null && defaultDevice.name == device.name && device.IsLoopback))
                     {
                         Debug.WriteLine($"Device {i}: {device.name}");
                         defaultDevice = device;
@@ -220,6 +196,32 @@ namespace WeatherWiser.Views
             }
         }
 
+        public void StartBass()
+        {
+            // BASS WASAPIの初期化(コールバック関数を指定)
+            bool initResult = BassWasapi.BASS_WASAPI_Init(_devicenumber, 0, 0, BASSWASAPIInit.BASS_WASAPI_BUFFER, 1f, 0.05f, _process, IntPtr.Zero);
+            if (!initResult)
+            {
+                var error = Bass.BASS_ErrorGetCode();
+                MessageBox.Show($"BASS WASAPI初期化エラーコード: {error}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            // BASS WASAPIの開始
+            bool startResult = BassWasapi.BASS_WASAPI_Start();
+            if (!startResult)
+            {
+                var error = Bass.BASS_ErrorGetCode();
+                MessageBox.Show($"BASS WASAPI開始時エラーコード: {error}", "エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            System.Threading.Thread.Sleep(500);
+
+            // タイマーを開始
+            _timer.Start();
+        }
+
         private void Timer_Tick(object sender, EventArgs e)
         {
             // スペクトラムの描画
@@ -244,10 +246,10 @@ namespace WeatherWiser.Views
             // バンドのピーク値
             float peek = 0;
             // バンドごとのピーク値を取得
-            for (int bandX = 0; bandX < _numberOfBar; bandX++)
+            for (int bandX = 0; bandX < _spectrums.Length; bandX++)
             {
                 // Math.Pow(...) で 20hz~20khz の対数スケールの近似値を取得し、ミックス周波数とFFTサンプル数に応じた倍率を掛ける
-                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_numberOfBar - 1)) + _freqParams.FreqShift) * _freqParams.MixFreqMultiplyer);
+                freqValue = (int)(Math.Pow(2, (bandX * 10.0 / (_spectrums.Length - 1)) + _freqParams.FreqShift) * _freqParams.MixFreqMultiplyer);
                 // FFTバッファから取得する周波数範囲の上限を調整
                 freqValue = freqValue <= freqPos ? freqPos + 1 : Math.Min(freqValue, _freqParams.MaxFftLength);
                 // 周波数範囲の上限までのFFTバッファを走査してピーク値を取得
@@ -262,7 +264,7 @@ namespace WeatherWiser.Views
             Debug.WriteLine(string.Join(",", _spectrums));
 
             // 周波数スペクトラムの描画
-            for (int x = 0; x < _numberOfBar; x++)
+            for (int x = 0; x < _spectrums.Length; x++)
             {
                 // バンド値の正規化
                 int spectrum = NormalizeValue(this._spectrums[x], byte.MaxValue, _spectrumPeek);
@@ -322,9 +324,15 @@ namespace WeatherWiser.Views
         private void MainWindow_Unloaded(object sender, RoutedEventArgs e)
         {
             CompositionTarget.Rendering -= OnRendering;
+            StopBass();
+            FreeBass();
+        }
+
+        private void StopBass()
+        {
             _timer.Stop();
             BassWasapi.BASS_WASAPI_Stop(true);
-            FreeBass();
+            Bass.BASS_Stop();
         }
 
         public void FreeBass()
