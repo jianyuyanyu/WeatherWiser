@@ -242,9 +242,9 @@ namespace WeatherWiser.Views
             // 走査するFFTバッファの位置
             int freqPos = 0;
             // 走査する周波数範囲の上限
-            int freqValue = 1;
+            int freqValue;
             // バンドのピーク値
-            float peek = 0;
+            float peek;
             // バンドごとのピーク値を取得
             for (int bandX = 0; bandX < _spectrums.Length; bandX++)
             {
