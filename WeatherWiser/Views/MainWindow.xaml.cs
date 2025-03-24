@@ -37,12 +37,6 @@ namespace WeatherWiser.Views
             InitializeComponent();
             Loaded += MainWindow_Loaded;
             Unloaded += MainWindow_Unloaded;
-
-            if (DataContext is MainWindowViewModel viewModel)
-            {
-                viewModel.SpectrumUpdated += OnSpectrumUpdated;
-                viewModel.LevelUpdated += OnLevelUpdated;
-            }
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -73,6 +67,8 @@ namespace WeatherWiser.Views
 
             if (DataContext is MainWindowViewModel viewModel)
             {
+                viewModel.SpectrumUpdated += OnSpectrumUpdated;
+                viewModel.LevelUpdated += OnLevelUpdated;
                 viewModel.StartSoundService();
             }
         }
@@ -191,6 +187,8 @@ namespace WeatherWiser.Views
 
             if (DataContext is MainWindowViewModel viewModel)
             {
+                viewModel.SpectrumUpdated -= OnSpectrumUpdated;
+                viewModel.LevelUpdated -= OnLevelUpdated;
                 viewModel.StopSoundService();
             }
         }
