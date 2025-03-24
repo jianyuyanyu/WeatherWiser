@@ -27,7 +27,7 @@ namespace WeatherWiser.ViewModels
         {
             _registryService = new RegistryService();
             base.LoadSettings();
-            AutoStartup = string.IsNullOrEmpty(_registryService.Read(_currentVersionRunBasePath, "WeatherWiser", string.Empty)) ? false : true;
+            AutoStartup = !string.IsNullOrEmpty(_registryService.Read(_currentVersionRunBasePath, "WeatherWiser", string.Empty));
             Displays = [.. Screen.AllScreens.Select(s => s.DeviceName)];
         }
 

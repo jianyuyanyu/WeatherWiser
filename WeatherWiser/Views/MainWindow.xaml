@@ -13,7 +13,10 @@
         Background="Transparent"
         ShowInTaskbar="False"
         Width="600"
-        Height="600">
+        Height="600"
+        Topmost = "{Binding AlwaysOnTop}"
+        Left="{Binding WindowLeft, Mode=TwoWay}"
+        Top="{Binding WindowTop, Mode=TwoWay}">
     <Window.Resources>
         <converters:IconIdToImageSourceConverter x:Key="IconIdToImageSourceConverter"/>
         <Style x:Key="HoverTextBlockStyle" TargetType="TextBlock">

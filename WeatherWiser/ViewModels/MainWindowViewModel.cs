@@ -27,6 +27,20 @@ namespace WeatherWiser.ViewModels
         }
         private WeatherInfo _weatherInfo;
 
+        public double WindowLeft
+        {
+            get => _windowLeft;
+            set => SetProperty(ref _windowLeft, value);
+        }
+        private double _windowLeft;
+
+        public double WindowTop
+        {
+            get => _windowTop;
+            set => SetProperty(ref _windowTop, value);
+        }
+        private double _windowTop;
+
         public MainWindowViewModel()
         {
             weatherService = new WeatherService();
@@ -36,15 +50,9 @@ namespace WeatherWiser.ViewModels
         public void Initialize()
         {
             LoadSettings();
-            InitializeTimers();
-            UpdateWindowTopmost();
-            UpdateWindowPosition();
-        }
-
-        private void InitializeTimers()
-        {
             InitializeDateTimeTimer();
             InitializeWeatherTimer();
+            SetupWindowPosition();
         }
 
         private void InitializeDateTimeTimer()
@@ -97,44 +105,28 @@ namespace WeatherWiser.ViewModels
             return nextHour - now;
         }
 
-        private void UpdateWindowTopmost()
+        private void SetupWindowPosition()
         {
-            var mainWindow = System.Windows.Application.Current.MainWindow;
-            if (mainWindow != null)
+            var screen = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == SelectedDisplay) ?? Screen.PrimaryScreen;
+            var workingArea = screen.WorkingArea;
+
+            WindowLeft = WindowPosition switch
             {
-                mainWindow.Topmost = AlwaysOnTop;
-            }
-        }
+                "TopLeft" => workingArea.Left + HorizontalOffset,
+                "TopRight" => workingArea.Right - 600 - HorizontalOffset,
+                "BottomLeft" => workingArea.Left + HorizontalOffset,
+                "BottomRight" => workingArea.Right - 600 - HorizontalOffset,
+                _ => workingArea.Left + HorizontalOffset
+            };
 
-        private void UpdateWindowPosition()
-        {
-            var mainWindow = System.Windows.Application.Current.MainWindow;
-            if (mainWindow != null)
+            WindowTop = WindowPosition switch
             {
-                var screen = Screen.AllScreens.FirstOrDefault(s => s.DeviceName == SelectedDisplay) ?? Screen.PrimaryScreen;
-                var workingArea = screen.WorkingArea;
-
-                double mainWindowWidth = double.IsNaN(mainWindow.Width) ? 600 : mainWindow.Width;
-                double mainWindowHeight = double.IsNaN(mainWindow.Height) ? 480 : mainWindow.Height;
-
-                mainWindow.Left = WindowPosition switch
-                {
-                    "TopLeft" => workingArea.Left + HorizontalOffset,
-                    "TopRight" => workingArea.Right - mainWindowWidth - HorizontalOffset,
-                    "BottomLeft" => workingArea.Left + HorizontalOffset,
-                    "BottomRight" => workingArea.Right - mainWindowWidth - HorizontalOffset,
-                    _ => mainWindow.Left
-                };
-
-                mainWindow.Top = WindowPosition switch
-                {
-                    "TopLeft" => workingArea.Top + VerticalOffset,
-                    "TopRight" => workingArea.Top + VerticalOffset,
-                    "BottomLeft" => workingArea.Bottom - mainWindowHeight - VerticalOffset,
-                    "BottomRight" => workingArea.Bottom - mainWindowHeight - VerticalOffset,
-                    _ => mainWindow.Top
-                };
-            }
+                "TopLeft" => workingArea.Top + VerticalOffset,
+                "TopRight" => workingArea.Top + VerticalOffset,
+                "BottomLeft" => workingArea.Bottom - 600 - VerticalOffset,
+                "BottomRight" => workingArea.Bottom - 600 - VerticalOffset,
+                _ => workingArea.Top + VerticalOffset
+            };
         }
     }
 }
