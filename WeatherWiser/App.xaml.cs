@@ -13,7 +13,7 @@ namespace WeatherWiser
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
         {
-            containerRegistry.RegisterForNavigation<MainWindow>();
+            containerRegistry.RegisterSingleton<MainWindow>();
             containerRegistry.RegisterForNavigation<SettingsWindow>();
         }
 
@@ -39,6 +39,7 @@ namespace WeatherWiser
 
             var contextMenu = new ContextMenuStrip();
             contextMenu.Items.Add("Settings", null, OnSettingsClicked);
+            contextMenu.Items.Add("Refresh", null, OnRefreshClicked);
             contextMenu.Items.Add("Exit", null, OnExitClicked);
             _notifyIcon.ContextMenuStrip = contextMenu;
         }
@@ -47,6 +48,12 @@ namespace WeatherWiser
         {
             var settingsWindow = Container.Resolve<SettingsWindow>();
             settingsWindow.ShowDialog();
+        }
+
+        private void OnRefreshClicked(object sender, EventArgs e)
+        {
+            var mainWindow = Container.Resolve<MainWindow>();
+            mainWindow.RefreshSoundService();
         }
 
         private void OnExitClicked(object sender, EventArgs e)

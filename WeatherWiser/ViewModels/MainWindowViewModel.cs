@@ -9,9 +9,12 @@ namespace WeatherWiser.ViewModels
 {
     public partial class MainWindowViewModel : BaseSettingsViewModel
     {
-        private readonly WeatherService weatherService;
+        private readonly SoundService _soundService;
+        private readonly WeatherService _weatherService;
         private DispatcherTimer _dateTimeTimer;
         private DispatcherTimer _weatherTimer;
+        public event Action<int[]> SpectrumUpdated;
+        public event Action<int[]> LevelUpdated;
 
         public DateTimeInfo DateTimeInfo
         {
@@ -43,7 +46,10 @@ namespace WeatherWiser.ViewModels
 
         public MainWindowViewModel()
         {
-            weatherService = new WeatherService();
+            _soundService = new SoundService();
+            _soundService.SpectrumUpdated += OnSpectrumUpdated;
+            _soundService.LevelUpdated += OnLevelUpdated;
+            _weatherService = new WeatherService();
             Initialize();
         }
 
@@ -95,7 +101,7 @@ namespace WeatherWiser.ViewModels
 
         private async void UpdateWeatherInfo()
         {
-            WeatherInfo = await weatherService.GetWeatherAsync(City);
+            WeatherInfo = await _weatherService.GetWeatherAsync(City);
         }
 
         private TimeSpan GetNextWeatherUpdateInterval()
@@ -103,6 +109,42 @@ namespace WeatherWiser.ViewModels
             DateTime now = DateTime.Now;
             DateTime nextHour = new DateTime(now.Year, now.Month, now.Day, now.Hour, 0, 0).AddHours(1);
             return nextHour - now;
+        }
+
+        public void StartSoundService()
+        {
+            _soundService.Init();
+            _soundService.Start();
+        }
+
+        public void StopSoundService()
+        {
+            _soundService.Stop();
+            _soundService.Free();
+        }
+
+        public void RefreshSoundService()
+        {
+            _soundService.Stop();
+            _soundService.Free();
+            _soundService.Init();
+            _soundService.Start();
+        }
+
+        private void OnSpectrumUpdated(int[] spectrums)
+        {
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                SpectrumUpdated?.Invoke(spectrums);
+            });
+        }
+
+        private void OnLevelUpdated(int[] levels)
+        {
+            App.Current.Dispatcher.Invoke(() =>
+            {
+                LevelUpdated?.Invoke(levels);
+            });
         }
 
         private void SetupWindowPosition()
