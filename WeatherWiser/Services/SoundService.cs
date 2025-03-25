@@ -47,8 +47,8 @@ namespace WeatherWiser.Services
             // デバイス情報に Unicode 文字セットを使用する
             Bass.BASS_SetConfig(BASSConfig.BASS_CONFIG_UNICODE, UNICODE);
             // 既定のデバイスを特定
-            int deviceCount = BassWasapi.BASS_WASAPI_GetDeviceCount();
             BASS_WASAPI_DEVICEINFO defaultDevice = null;
+            int deviceCount = BassWasapi.BASS_WASAPI_GetDeviceCount();
             for (int i = 0; i < deviceCount; i++)
             {
                 var device = BassWasapi.BASS_WASAPI_GetDeviceInfo(i);
@@ -79,14 +79,12 @@ namespace WeatherWiser.Services
 
             _freqParams = new FreqParams(defaultDevice.mixfreq);
             Bass.BASS_SetConfig(BASSConfig.BASS_CONFIG_UPDATETHREADS, false);
+
             if (!Bass.BASS_Init(0, defaultDevice.mixfreq, BASSInit.BASS_DEVICE_DEFAULT, IntPtr.Zero))
             {
                 throw new Exception($"BASS 音声出力デバイス初期化時エラーコード: {Bass.BASS_ErrorGetCode()}");
             }
-        }
 
-        public void Start()
-        {
             if (!Bass.BASS_Start())
             {
                 throw new Exception($"BASS 音声出力デバイス開始時エラーコード: {Bass.BASS_ErrorGetCode()}");
@@ -96,7 +94,10 @@ namespace WeatherWiser.Services
             {
                 throw new Exception($"BASS WASAPI初期化時エラーコード: {Bass.BASS_ErrorGetCode()}");
             }
+        }
 
+        public void Start()
+        {
             if (!BassWasapi.BASS_WASAPI_Start())
             {
                 throw new Exception($"BASS WASAPI開始時エラーコード: {Bass.BASS_ErrorGetCode()}");
@@ -110,12 +111,12 @@ namespace WeatherWiser.Services
         {
             _timer.Stop();
             BassWasapi.BASS_WASAPI_Stop(true);
-            BassWasapi.BASS_WASAPI_Free();
-            Bass.BASS_Stop();
         }
 
         public void Free()
         {
+            BassWasapi.BASS_WASAPI_Free();
+            Bass.BASS_Stop();
             Bass.BASS_Free();
         }
 
