@@ -52,23 +52,25 @@ namespace WeatherWiser.Services
             for (int i = 0; i < deviceCount; i++)
             {
                 var device = BassWasapi.BASS_WASAPI_GetDeviceInfo(i);
-                if (device != null)
+                if (device == null)
                 {
-                    // 既定のサウンドデバイスと同名でループバックに対応したデバイスを選択
-                    if ((device.IsDefault && device.IsEnabled && device.IsLoopback) ||
-                        (defaultDevice != null && defaultDevice.name == device.name && device.IsLoopback))
-                    {
-                        Debug.WriteLine($"Device {i}: {device.name}");
-                        defaultDevice = device;
-                        _devicenumber = i;
-                        break;
-                    }
-                    else if (device.IsDefault && device.IsEnabled)
-                    {
-                        Debug.WriteLine($"Device {i}: {device.name}");
-                        defaultDevice = device;
-                        _devicenumber = i;
-                    }
+                    continue;
+                }
+
+                // 既定のサウンドデバイスと同名でループバックに対応したデバイスを選択
+                if ((device.IsDefault && device.IsEnabled && device.IsLoopback) ||
+                    (defaultDevice != null && defaultDevice.name == device.name && device.IsLoopback))
+                {
+                    Debug.WriteLine($"Device {i}: {device.name}");
+                    defaultDevice = device;
+                    _devicenumber = i;
+                    break;
+                }
+                else if (device.IsDefault && device.IsEnabled)
+                {
+                    Debug.WriteLine($"Device {i}: {device.name}");
+                    defaultDevice = device;
+                    _devicenumber = i;
                 }
             }
 
@@ -110,14 +112,28 @@ namespace WeatherWiser.Services
         public void Stop()
         {
             _timer.Stop();
-            BassWasapi.BASS_WASAPI_Stop(true);
+            if (!BassWasapi.BASS_WASAPI_Stop(true))
+            {
+                throw new Exception($"BASS WASAPI停止時エラーコード: {Bass.BASS_ErrorGetCode()}");
+            }
         }
 
         public void Free()
         {
-            BassWasapi.BASS_WASAPI_Free();
-            Bass.BASS_Stop();
-            Bass.BASS_Free();
+            if (!BassWasapi.BASS_WASAPI_Free())
+            {
+                throw new Exception($"BASS WASAPI解放時エラーコード: {Bass.BASS_ErrorGetCode()}");
+            }
+
+            if (Bass.BASS_Stop())
+            {
+                throw new Exception($"BASS 音声出力デバイス停止時エラーコード: {Bass.BASS_ErrorGetCode()}");
+            }
+
+            if (Bass.BASS_Free())
+            {
+                throw new Exception($"BASS 音声出力デバイス解放時エラーコード: {Bass.BASS_ErrorGetCode()}");
+            }
         }
 
         private void Timer_Tick(object sender, EventArgs e)

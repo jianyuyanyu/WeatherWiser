@@ -1,6 +1,8 @@
 ﻿using Prism.Ioc;
 using Prism.Unity;
 using System;
+using System.IO;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Forms;
 using WeatherWiser.Views;
@@ -30,12 +32,23 @@ namespace WeatherWiser
 
         private void InitializeNotifyIcon()
         {
-            _notifyIcon = new NotifyIcon
+            var assembly = Assembly.GetExecutingAssembly();
+            using (Stream stream = assembly.GetManifestResourceStream("WeatherWiser.Resources.WeatherWiser.ico"))
             {
-                Icon = new System.Drawing.Icon("Resources/WeatherWiser.ico"),
-                Visible = true,
-                Text = "Weather Wiser"
-            };
+                if (stream != null)
+                {
+                    _notifyIcon = new NotifyIcon
+                    {
+                        Icon = new System.Drawing.Icon(stream),
+                        Visible = true,
+                        Text = "Weather Wiser"
+                    };
+                }
+                else
+                {
+                    throw new Exception("アイコンリソースの読み込みに失敗しました。");
+                }
+            }
 
             var contextMenu = new ContextMenuStrip();
             contextMenu.Items.Add("Settings", null, OnSettingsClicked);
