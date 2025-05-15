@@ -125,12 +125,12 @@ namespace WeatherWiser.Services
                 throw new Exception($"BASS WASAPI解放時エラーコード: {Bass.BASS_ErrorGetCode()}");
             }
 
-            if (Bass.BASS_Stop())
+            if (!Bass.BASS_Stop())
             {
                 throw new Exception($"BASS 音声出力デバイス停止時エラーコード: {Bass.BASS_ErrorGetCode()}");
             }
 
-            if (Bass.BASS_Free())
+            if (!Bass.BASS_Free())
             {
                 throw new Exception($"BASS 音声出力デバイス解放時エラーコード: {Bass.BASS_ErrorGetCode()}");
             }
