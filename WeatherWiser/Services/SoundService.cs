@@ -60,20 +60,21 @@ namespace WeatherWiser.Services
                     continue;
                 }
 
-                // 既定のサウンドデバイスと同名でループバックに対応したデバイスを選択
-                if ((device.IsDefault && device.IsEnabled && device.IsLoopback) ||
-                    (ActiveDeviceInfo != null && ActiveDeviceInfo.name == device.name && device.IsLoopback))
+                if (device.IsDefault && device.IsEnabled)
                 {
+                    // OS が既定として選択しているサウンドデバイスを特定
+                    Debug.WriteLine($"Device {i}: {device.name}");
+                    ActiveDeviceInfo = device;
+                    _devicenumber = i;
+                }
+                else if (ActiveDeviceInfo != null && ActiveDeviceInfo.name == device.name && 
+                    device.IsLoopback && device.IsInput)
+                {
+                    // 特定したサウンドデバイスと同名でループバックに対応したデバイスを特定
                     Debug.WriteLine($"Device {i}: {device.name}");
                     ActiveDeviceInfo = device;
                     _devicenumber = i;
                     break;
-                }
-                else if (device.IsDefault && device.IsEnabled)
-                {
-                    Debug.WriteLine($"Device {i}: {device.name}");
-                    ActiveDeviceInfo = device;
-                    _devicenumber = i;
                 }
             }
 
