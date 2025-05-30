@@ -10,6 +10,13 @@ namespace WeatherWiser.Services
 {
     public class SoundService
     {
+        // WASAPIデバイス情報
+        public BASS_WASAPI_DEVICEINFO ActiveDeviceInfo { get; private set; }
+        // スペクトラム更新イベント
+        public event Action<int[]> SpectrumUpdated;
+        // 音量レベル更新イベント
+        public event Action<int[]> LevelUpdated;
+
         // WASAPIプロセス
         private readonly WASAPIPROC _process;
         // 更新用タイマー
@@ -24,12 +31,8 @@ namespace WeatherWiser.Services
         private readonly float[] _fft = new float[16384 * 2];
         // スペクトラムデータ
         private readonly int[] _spectrums = new int[16];
-        // スペクトラム更新イベント
-        public event Action<int[]> SpectrumUpdated;
         // 音量レベル
         private readonly int[] _levels = new int[2];
-        // 音量レベル更新イベント
-        public event Action<int[]> LevelUpdated;
 
         public SoundService()
         {
@@ -47,7 +50,7 @@ namespace WeatherWiser.Services
             // デバイス情報に Unicode 文字セットを使用する
             Bass.BASS_SetConfig(BASSConfig.BASS_CONFIG_UNICODE, UNICODE);
             // 既定のデバイスを特定
-            BASS_WASAPI_DEVICEINFO defaultDevice = null;
+            ActiveDeviceInfo = null;
             int deviceCount = BassWasapi.BASS_WASAPI_GetDeviceCount();
             for (int i = 0; i < deviceCount; i++)
             {
@@ -59,30 +62,30 @@ namespace WeatherWiser.Services
 
                 // 既定のサウンドデバイスと同名でループバックに対応したデバイスを選択
                 if ((device.IsDefault && device.IsEnabled && device.IsLoopback) ||
-                    (defaultDevice != null && defaultDevice.name == device.name && device.IsLoopback))
+                    (ActiveDeviceInfo != null && ActiveDeviceInfo.name == device.name && device.IsLoopback))
                 {
                     Debug.WriteLine($"Device {i}: {device.name}");
-                    defaultDevice = device;
+                    ActiveDeviceInfo = device;
                     _devicenumber = i;
                     break;
                 }
                 else if (device.IsDefault && device.IsEnabled)
                 {
                     Debug.WriteLine($"Device {i}: {device.name}");
-                    defaultDevice = device;
+                    ActiveDeviceInfo = device;
                     _devicenumber = i;
                 }
             }
 
-            if (defaultDevice == null || !defaultDevice.IsLoopback)
+            if (ActiveDeviceInfo == null || !ActiveDeviceInfo.IsLoopback)
             {
                 throw new Exception("ループバックに対応した音声出力デバイスが見つかりません。");
             }
 
-            _freqParams = new FreqParams(defaultDevice.mixfreq);
+            _freqParams = new FreqParams(ActiveDeviceInfo.mixfreq);
             Bass.BASS_SetConfig(BASSConfig.BASS_CONFIG_UPDATETHREADS, false);
 
-            if (!Bass.BASS_Init(0, defaultDevice.mixfreq, BASSInit.BASS_DEVICE_DEFAULT, IntPtr.Zero))
+            if (!Bass.BASS_Init(0, ActiveDeviceInfo.mixfreq, BASSInit.BASS_DEVICE_DEFAULT, IntPtr.Zero))
             {
                 throw new Exception($"BASS 音声出力デバイス初期化時エラーコード: {Bass.BASS_ErrorGetCode()}");
             }
@@ -134,12 +137,33 @@ namespace WeatherWiser.Services
             {
                 throw new Exception($"BASS 音声出力デバイス解放時エラーコード: {Bass.BASS_ErrorGetCode()}");
             }
+
+            ActiveDeviceInfo = null;
         }
 
         private void Timer_Tick(object sender, EventArgs e)
         {
             UpdateSpectrum();
             UpdateLevel();
+        }
+
+        public string GetDeviceInfo()
+        {
+            if (ActiveDeviceInfo == null)
+            {
+                return "Device not initialised";
+            }
+
+            var name = ActiveDeviceInfo?.name ?? "No active device";
+            var freq = ActiveDeviceInfo?.mixfreq ?? 0;
+            var chans = ActiveDeviceInfo?.mixchans switch
+            {
+                1 => "Mono",
+                2 => "Stereo",
+                _ => "Unknown"
+            };
+
+            return $"{name} ({freq}Hz, {chans})";
         }
 
         private void UpdateSpectrum()

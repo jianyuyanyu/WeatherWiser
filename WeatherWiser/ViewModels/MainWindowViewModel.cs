@@ -30,6 +30,13 @@ namespace WeatherWiser.ViewModels
         }
         private WeatherInfo _weatherInfo;
 
+        public string DeviceInfo
+        {
+            get => _deviceInfo;
+            set => SetProperty(ref _deviceInfo, value);
+        }
+        private string _deviceInfo;
+
         public double WindowLeft
         {
             get => _windowLeft;
@@ -115,6 +122,7 @@ namespace WeatherWiser.ViewModels
         {
             _soundService.Init();
             _soundService.Start();
+            DeviceInfo = _soundService.GetDeviceInfo();
         }
 
         public void StopSoundService()
@@ -125,10 +133,8 @@ namespace WeatherWiser.ViewModels
 
         public void RefreshSoundService()
         {
-            _soundService.Stop();
-            _soundService.Free();
-            _soundService.Init();
-            _soundService.Start();
+            StopSoundService();
+            StartSoundService();
         }
 
         private void OnSpectrumUpdated(int[] spectrums)

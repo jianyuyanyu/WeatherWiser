@@ -13,7 +13,7 @@
         Background="Transparent"
         ShowInTaskbar="False"
         Width="600"
-        Height="600"
+        Height="610"
         Topmost = "{Binding AlwaysOnTop}"
         Left="{Binding WindowLeft, Mode=TwoWay}"
         Top="{Binding WindowTop, Mode=TwoWay}">
@@ -33,6 +33,7 @@
     </Window.Resources>
     <Grid Margin="4">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -106,13 +107,18 @@
                     Text="{Binding WeatherInfo.CardinalDirection, StringFormat='風向 {0}'}" FontSize="{Binding SmallFontSize}" Style="{StaticResource HoverTextBlockStyle}"/>
         </Grid>
 
-        <Canvas Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0"
+        <Canvas Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,5,0,0"
                 Width="544" Height="35" Name="LevelCanvas">
             <TextBlock Text="L" FontSize="14" FontWeight="Normal" Foreground="White" Canvas.Left="4" Canvas.Top="1"/>
             <TextBlock Text="R" FontSize="14" FontWeight="Normal" Foreground="White" Canvas.Left="4" Canvas.Top="16"/>
         </Canvas>
-
-        <Canvas Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0"
+        
+        <TextBlock Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center"
+                Style="{StaticResource HoverTextBlockStyle}">
+            <Run Text="{Binding DeviceInfo, Mode=OneWay}" FontSize="14"/>
+        </TextBlock>
+        
+        <Canvas Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,5,0,0"
                 Width="544" Height="120" Name="SpectrumCanvas">
             <TextBlock Text="20" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="12" Canvas.Top="103"/>
             <TextBlock Text="30" FontSize="10" FontWeight="Normal" Foreground="White" Canvas.Left="46" Canvas.Top="103"/>
