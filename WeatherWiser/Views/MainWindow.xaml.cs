@@ -131,8 +131,12 @@ namespace WeatherWiser.Views
                 // バンド値に応じて矩形の色を変更
                 for (int y = 0; y < _spectrumPeek; y++)
                 {
-                    _spectrumRects[x, y].Fill = y + 1 == peekSpectrum ? Brushes.Lime :
+                    var newFill = y + 1 == peekSpectrum ? Brushes.Lime :
                         y < spectrum ? Brushes.LimeGreen : Brushes.DimGray;
+                    if (_spectrumRects[x, y].Fill != newFill)
+                    {
+                        _spectrumRects[x, y].Fill = newFill;
+                    }
                 }
             }
         }
@@ -151,10 +155,14 @@ namespace WeatherWiser.Views
                 // 音量レベルに応じて矩形の色を変更
                 for (int j = 0; j < _levelPeek; j++)
                 {
-                    _levelRects[i, j].Fill = (j + 1 == normalizedPeekLevel) ?
+                    var newFill = (j + 1 == normalizedPeekLevel) ?
                         j >= 8 ? Brushes.Red : Brushes.Lime :
                         j < normalizedLevel ?
                         j >= 8 ? Brushes.Crimson : Brushes.LimeGreen : Brushes.DimGray;
+                    if (_levelRects[i, j].Fill != newFill)
+                    {
+                        _levelRects[i, j].Fill = newFill;
+                    }
                 }
             }
         }
