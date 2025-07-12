@@ -1,22 +1,47 @@
-﻿using System;
+﻿using NAudio.CoreAudioApi;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows.Threading;
 using Un4seen.Bass;
 using Un4seen.BassWasapi;
 using WeatherWiser.Models;
+using WeatherWiser.Services.Audio;
 
 namespace WeatherWiser.Services
 {
     public class SoundService
     {
-        // WASAPIデバイス情報
-        public BASS_WASAPI_DEVICEINFO ActiveDeviceInfo { get; private set; }
         // スペクトラム更新イベント
         public event Action<int[]> SpectrumUpdated;
         // 音量レベル更新イベント
         public event Action<int[]> LevelUpdated;
+        // アクティブデバイス情報変更イベント
+        public event Action ActiveDeviceInfoChanged;
 
+        // WASAPIデバイス情報
+        private BASS_WASAPI_DEVICEINFO _activeDeviceInfo;
+        public BASS_WASAPI_DEVICEINFO ActiveDeviceInfo
+        {
+            get => _activeDeviceInfo;
+            private set
+            {
+                if (_activeDeviceInfo != value)
+                {
+                    _activeDeviceInfo = value;
+                    ActiveDeviceInfoChanged?.Invoke();
+                }
+            }
+        }
+
+        // デバイス列挙子
+        private MMDeviceEnumerator _deviceEnumerator;
+        // デバイス通知クライアント
+        private DeviceNotificationClient _notificationClient;
+        // デバイスが破棄されたかどうかのフラグ
+        private bool _isDisposed = false;
+        // 保留中のデフォルトデバイスID
+        private string _pendingDefaultDeviceId;
         // WASAPIプロセス
         private readonly WASAPIPROC _process;
         // 更新用タイマー
@@ -36,8 +61,13 @@ namespace WeatherWiser.Services
 
         public SoundService()
         {
+            _deviceEnumerator = new MMDeviceEnumerator();
+            _notificationClient = new DeviceNotificationClient();
+            _notificationClient.DefaultDeviceChanged += OnDefaultDeviceChanged;
+            _deviceEnumerator.RegisterEndpointNotificationCallback(_notificationClient);
+
             _process = new WASAPIPROC(WasapiProcess);
-            _timer = new DispatcherTimer()
+            _timer = new DispatcherTimer(DispatcherPriority.Render)
             {
                 Interval = TimeSpan.FromMilliseconds(25),
                 IsEnabled = false,
@@ -45,36 +75,139 @@ namespace WeatherWiser.Services
             _timer.Tick += Timer_Tick;
         }
 
-        public void Init()
+        public string GetDeviceInfo()
         {
+            if (ActiveDeviceInfo == null)
+            {
+                return "Device not initialised";
+            }
+
+            var name = ActiveDeviceInfo?.name ?? "No active device";
+            var freq = ActiveDeviceInfo?.mixfreq ?? 0;
+            var chans = ActiveDeviceInfo?.mixchans switch
+            {
+                1 => "Mono",
+                2 => "Stereo",
+                >= 3 => "Multi",
+                _ => "Unknown"
+            };
+
+            return $"{name} ({freq}Hz, {chans})";
+        }
+
+        public void StartSoundService()
+        {
+            try
+            {
+                Init();
+                Start();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"デバイス初期化エラー: {ex.Message}");
+            }
+        }
+
+        public void StopSoundService()
+        {
+            try
+            {
+                Stop();
+                Free();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"デバイス停止エラー: {ex.Message}");
+            }
+        }
+
+        public void RestartSoundService()
+        {
+            try
+            {
+                Stop();
+                Free();
+                Init();
+                Start();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"デバイス再初期化エラー: {ex.Message}");
+            }
+        }
+
+        public void Dispose()
+        {
+            if (!_isDisposed)
+            {
+                _notificationClient.DefaultDeviceChanged -= OnDefaultDeviceChanged;
+                _deviceEnumerator.UnregisterEndpointNotificationCallback(_notificationClient);
+                _deviceEnumerator.Dispose();
+                _isDisposed = true;
+            }
+        }
+
+        private void OnDefaultDeviceChanged(string defaultDeviceId)
+        {
+            Debug.WriteLine("デフォルトデバイスが変更されました。再初期化します。");
+            _pendingDefaultDeviceId = defaultDeviceId;
+            RestartSoundService();
+        }
+
+        private void Timer_Tick(object sender, EventArgs e)
+        {
+            UpdateSpectrum();
+            UpdateLevel();
+        }
+
+        private void Init()
+        {
+            ActiveDeviceInfo = null;
             // デバイス情報に Unicode 文字セットを使用する
             Bass.BASS_SetConfig(BASSConfig.BASS_CONFIG_UNICODE, UNICODE);
-            // 既定のデバイスを特定
-            ActiveDeviceInfo = null;
+            // デバイス数を取得
             int deviceCount = BassWasapi.BASS_WASAPI_GetDeviceCount();
-            for (int i = 0; i < deviceCount; i++)
-            {
-                var device = BassWasapi.BASS_WASAPI_GetDeviceInfo(i);
-                if (device == null)
-                {
-                    continue;
-                }
 
-                if (device.IsDefault && device.IsEnabled)
+            if (!string.IsNullOrEmpty(_pendingDefaultDeviceId))
+            {
+                // 1. defaultDeviceIdが指定されていればそれを優先
+                for (int i = 0; i < deviceCount; i++)
                 {
-                    // OS が既定として選択しているサウンドデバイスを特定
-                    Debug.WriteLine($"Device {i}: {device.name}");
-                    ActiveDeviceInfo = device;
-                    _devicenumber = i;
+                    var device = BassWasapi.BASS_WASAPI_GetDeviceInfo(i);
+                    if (device != null && device.id == _pendingDefaultDeviceId && device.IsLoopback && device.IsEnabled)
+                    {
+                        Debug.WriteLine($"[切替] Device {i}: {device.name}");
+                        ActiveDeviceInfo = device;
+                        _devicenumber = i;
+                        _pendingDefaultDeviceId = null;
+                        break;
+                    }
                 }
-                else if (ActiveDeviceInfo != null && ActiveDeviceInfo.name == device.name && 
-                    device.IsLoopback && device.IsInput)
+            }
+            else
+            {
+                // 2. デフォルトデバイスを探す
+                for (int i = 0; i < deviceCount; i++)
                 {
-                    // 特定したサウンドデバイスと同名でループバックに対応したデバイスを特定
-                    Debug.WriteLine($"Device {i}: {device.name}");
-                    ActiveDeviceInfo = device;
-                    _devicenumber = i;
-                    break;
+                    var device = BassWasapi.BASS_WASAPI_GetDeviceInfo(i);
+                    if (device == null) continue;
+
+                    if (device.IsDefault && device.IsEnabled)
+                    {
+                        // OS が既定として選択しているサウンドデバイスを特定
+                        Debug.WriteLine($"[既定] Device {i}: {device.name}");
+                        ActiveDeviceInfo = device;
+                        _devicenumber = i;
+                    }
+                    else if (ActiveDeviceInfo != null && ActiveDeviceInfo.name == device.name &&
+                        device.IsLoopback && device.IsInput)
+                    {
+                        // 特定したサウンドデバイスと同名でループバックに対応したデバイスを特定
+                        Debug.WriteLine($"[特定] Device {i}: {device.name}");
+                        ActiveDeviceInfo = device;
+                        _devicenumber = i;
+                        break;
+                    }
                 }
             }
 
@@ -102,7 +235,7 @@ namespace WeatherWiser.Services
             }
         }
 
-        public void Start()
+        private void Start()
         {
             if (!BassWasapi.BASS_WASAPI_Start())
             {
@@ -113,7 +246,7 @@ namespace WeatherWiser.Services
             _timer.Start();
         }
 
-        public void Stop()
+        private void Stop()
         {
             _timer.Stop();
             if (!BassWasapi.BASS_WASAPI_Stop(true))
@@ -122,7 +255,7 @@ namespace WeatherWiser.Services
             }
         }
 
-        public void Free()
+        private void Free()
         {
             if (!BassWasapi.BASS_WASAPI_Free())
             {
@@ -140,31 +273,6 @@ namespace WeatherWiser.Services
             }
 
             ActiveDeviceInfo = null;
-        }
-
-        private void Timer_Tick(object sender, EventArgs e)
-        {
-            UpdateSpectrum();
-            UpdateLevel();
-        }
-
-        public string GetDeviceInfo()
-        {
-            if (ActiveDeviceInfo == null)
-            {
-                return "Device not initialised";
-            }
-
-            var name = ActiveDeviceInfo?.name ?? "No active device";
-            var freq = ActiveDeviceInfo?.mixfreq ?? 0;
-            var chans = ActiveDeviceInfo?.mixchans switch
-            {
-                1 => "Mono",
-                2 => "Stereo",
-                _ => "Unknown"
-            };
-
-            return $"{name} ({freq}Hz, {chans})";
         }
 
         private void UpdateSpectrum()

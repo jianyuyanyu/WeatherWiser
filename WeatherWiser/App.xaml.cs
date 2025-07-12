@@ -5,6 +5,8 @@ using System.IO;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Forms;
+using System.Windows.Interop;
+using System.Windows.Media;
 using WeatherWiser.Views;
 
 namespace WeatherWiser
@@ -66,7 +68,7 @@ namespace WeatherWiser
         private void OnRefreshClicked(object sender, EventArgs e)
         {
             var mainWindow = Container.Resolve<MainWindow>();
-            mainWindow.RefreshSoundService();
+            mainWindow.RestartSoundService();
         }
 
         private void OnExitClicked(object sender, EventArgs e)

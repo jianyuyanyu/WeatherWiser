@@ -13,8 +13,8 @@ namespace WeatherWiser.Views
     {
         // 画面描画の最終時間
         private DateTime _lastRenderTime = DateTime.MinValue;
-        // 画面描画の間隔(100ms)
-        private readonly TimeSpan _renderInterval = TimeSpan.FromMilliseconds(100);
+        // 画面描画の間隔(16ms)
+        private readonly TimeSpan _renderInterval = TimeSpan.FromMilliseconds(16);
         // 音量レベルの減衰値
         private readonly short _levelDecay = 500;
         // 音量レベルのピーク値
@@ -181,11 +181,11 @@ namespace WeatherWiser.Views
             return peekValue;
         }
 
-        public void RefreshSoundService()
+        public void RestartSoundService()
         {
             if (DataContext is MainWindowViewModel viewModel)
             {
-                viewModel.RefreshSoundService();
+                viewModel.RestartSoundService();
             }
         }
 

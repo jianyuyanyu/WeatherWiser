@@ -56,6 +56,7 @@ namespace WeatherWiser.ViewModels
             _soundService = new SoundService();
             _soundService.SpectrumUpdated += OnSpectrumUpdated;
             _soundService.LevelUpdated += OnLevelUpdated;
+            _soundService.ActiveDeviceInfoChanged += OnActiveDeviceInfoChanged;
             _weatherService = new WeatherService();
             Initialize();
         }
@@ -84,7 +85,7 @@ namespace WeatherWiser.ViewModels
 
         private DispatcherTimer CreateTimer(EventHandler tickHandler, TimeSpan interval)
         {
-            var timer = new DispatcherTimer { Interval = interval };
+            var timer = new DispatcherTimer(DispatcherPriority.Render) { Interval = interval };
             timer.Tick += tickHandler;
             timer.Start();
             return timer;
@@ -120,21 +121,17 @@ namespace WeatherWiser.ViewModels
 
         public void StartSoundService()
         {
-            _soundService.Init();
-            _soundService.Start();
-            DeviceInfo = _soundService.GetDeviceInfo();
+            _soundService.StartSoundService();
         }
 
         public void StopSoundService()
         {
-            _soundService.Stop();
-            _soundService.Free();
+            _soundService.StopSoundService();
         }
 
-        public void RefreshSoundService()
+        public void RestartSoundService()
         {
-            StopSoundService();
-            StartSoundService();
+            _soundService.RestartSoundService();
         }
 
         private void OnSpectrumUpdated(int[] spectrums)
@@ -151,6 +148,11 @@ namespace WeatherWiser.ViewModels
             {
                 LevelUpdated?.Invoke(levels);
             });
+        }
+
+        private void OnActiveDeviceInfoChanged()
+        {
+            DeviceInfo = _soundService.GetDeviceInfo();
         }
 
         private void SetupWindowPosition()
